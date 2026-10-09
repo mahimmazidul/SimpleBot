@@ -534,3 +534,31 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             failed += 1
         await asyncio.sleep(0.05)
     await message.reply_text(f"📣 Broadcast done. Sent: {sent}, failed: {failed}.")
+
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    user = update.effective_user
+    if message is None or user is None or not is_admin(user.id):
+        return
+    detailed = await asyncio.to_thread(get_detailed_stats)
+    lines = [
+        "📈 Detailed stats",
+        f"Attempts: {detailed['attempts']}   Failures: {detailed['failures']}",
+        "",
+        "By site:",
+        *[f"• {site}: {count}" for site, count in detailed["by_site"]],
+        "",
+        "By quality:",
+        *[f"• {label}: {count}" for label, count in detailed["by_resolution"]],
+        "",
+        "Last 7 days:",
+        *[f"• {day}: {count}" for day, count in detailed["by_day"]],
+        "",
+        "Errors:",
+        *[f"• {error_type}: {count}" for error_type, count in detailed["errors"]],
+        "",
+        "Top users:",
+        *[f"• {user_id}: {count}" for user_id, count in detailed["top_users"]],
+    ]
+    await message.reply_text("\n".join(lines)[:4000])
