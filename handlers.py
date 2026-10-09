@@ -117,3 +117,19 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if message is None:
         return
     await message.reply_text(await build_start_text())
+
+
+async def record_outcome(
+    user_id: int,
+    url: str,
+    site: str | None,
+    resolution: str | None,
+    size_mb: float | None,
+    duration: int | None,
+    success: bool,
+    error_type: str | None,
+) -> None:
+    try:
+        await asyncio.to_thread(record_download, user_id, url, site, resolution, size_mb, duration, success, error_type)
+    except Exception:
+        logger.exception("Could not record download statistics")
