@@ -278,3 +278,68 @@ async def run_pipeline(
         await set_reaction(context, chat_id, source_message_id, "❌")
     finally:
         await asyncio.to_thread(cleanup_by_id, unique_id)
+
+
+async def process_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: str, mode: str) -> None:
+    source_message = update.effective_message
+    user = update.effective_user
+    if source_message is None or user is None:
+        return
+    chat_id = source_message.chat_id
+    source_message_id = source_message.message_id
+    await set_reaction(context, chat_id, source_message_id, "👀")
+    status_message = await source_message.reply_text("🔍 Fetching info...")
+    try:
+        if not await asyncio.to_thread(enforce_storage_limit):
+            await edit_status(status_message, "⚠️ Server is busy storing files. Try again shortly.")
+            await set_reaction(context, chat_id, source_message_id, "❌")
+            return
+        if await asyncio.to_thread(is_memory_pressure):
+            await edit_status(status_message, "⚠️ Server memory is low. Try again shortly.")
+            await set_reaction(context, chat_id, source_message_id, "❌")
+            return
+        cookie_path = await asyncio.to_thread(find_cookie_file, url)
+        info = await fetch_metadata(url, cookie_path)
+        check_metadata(info)
+        sizes = estimate_quality_sizes(info)
+        if not sizes and mode != "audio":
+            raise FormatUnavailableError()
+        request: dict[str, Any] = {
+            "url": url,
+            "user_id": user.id,
+            "title": str(info.get("title") or "video")[:200],
+            "duration": int(info.get("duration") or 0),
+            "sizes": sizes,
+            "chat_id": chat_id,
+            "source_message_id": source_message_id,
+        }
+        if mode == "audio":
+            await run_pipeline(context, chat_id, source_message_id, status_message, request, None, True)
+        elif mode == "auto":
+            resolution, fits = select_auto_format(info)
+            note = ""
+            if not fits:
+                note = (
+                    f"⚠️ No quality fits under {api_manager.get_effective_max_mb()} MB. "
+                    "Trying the smallest; it may be rejected.\n"
+                )
+            await run_pipeline(context, chat_id, source_message_id, status_message, request, resolution, False, note)
+        else:
+            unique_id = uuid.uuid4().hex[:10]
+            pending = context.user_data.setdefault("pending", {})
+            if len(pending) >= MAX_STORED_REQUESTS:
+                pending.pop(next(iter(pending)))
+            pending[unique_id] = request
+            await edit_status(
+                status_message,
+                f"🎬 {request['title']}\nChoose a quality:",
+                build_quality_keyboard(unique_id, sizes),
+            )
+    except DownloadError as error:
+        await report_failure(
+            context, chat_id, source_message_id, status_message, user.id, url, error, mode == "audio"
+        )
+    except Exception:
+        logger.exception("Processing failed for %s", url)
+        await edit_status(status_message, "❌ Something went wrong.")
+        await set_reaction(context, chat_id, source_message_id, "❌")
