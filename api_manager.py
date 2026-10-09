@@ -17,3 +17,16 @@ class ApiManager:
         self.local_url = ""
         self.token = ""
         self.http_client: httpx.AsyncClient | None = None
+
+    async def init(self, token: str, local_url: str) -> None:
+        self.token = token
+        self.local_url = local_url
+        self.public_bot = Bot(token=token)
+        await self.public_bot.initialize()
+        self.http_client = httpx.AsyncClient(timeout=config.PROBE_TIMEOUT_SEC)
+        self.local_api_available = await self.probe_local_api()
+        if self.local_api_available:
+            await self.create_local_bot()
+            logger.info("Local API detected. Large file support enabled.")
+        elif local_url:
+            logger.warning("Local API not found at %s. Files over 50 MB will be rejected.", local_url)
