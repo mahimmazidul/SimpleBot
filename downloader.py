@@ -29,3 +29,13 @@ from utils import extract_site_name, file_size_megabytes, random_ua
 logger = logging.getLogger(__name__)
 
 AUDIO_FORMAT = "bestaudio[ext=m4a]/bestaudio"
+
+
+@dataclass(frozen=True)
+class DownloadResult:
+    file_path: str
+    title: str
+    duration: int
+    site: str
+    resolution: int | None
+    size_mb: float
