@@ -79,3 +79,10 @@ def delete_file_quietly(path: str) -> None:
     except OSError as error:
         logger.error("Could not delete %s: %s", path, error)
     gc.collect()
+
+
+def wipe_temp_directory() -> None:
+    with os.scandir(TEMP_DIR) as entries:
+        stale_paths = [entry.path for entry in entries if entry.is_file() and not entry.name.startswith(".")]
+    for stale_path in stale_paths:
+        delete_file_quietly(stale_path)
