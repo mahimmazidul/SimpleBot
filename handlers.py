@@ -440,3 +440,33 @@ async def handle_quality_callback(update: Update, context: ContextTypes.DEFAULT_
         resolution,
         audio_only,
     )
+
+
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    if message is None:
+        return
+    temp_mb = await asyncio.to_thread(get_temp_usage_mb)
+    stats = await asyncio.to_thread(get_global_stats)
+    age_days = await asyncio.to_thread(yt_dlp_age_days)
+    if age_days > 30:
+        ytdlp_line = f"⚠️ yt-dlp is {age_days} days old. Extractors may be broken; update it."
+    else:
+        ytdlp_line = f"🧩 yt-dlp: {yt_dlp.version.__version__}"
+    lines = [
+        "📊 Bot Status",
+        "━━━━━━━━━━━━",
+        f"{'🟢' if api_manager.public_bot is not None else '🔴'} Public API: "
+        f"{'Connected' if api_manager.public_bot is not None else 'Not started'}",
+        f"{'🟢' if api_manager.local_api_available else '🔴'} Local API: "
+        f"{'Connected' if api_manager.local_api_available else 'Not found'}",
+        f"📏 Max file size: {api_manager.get_effective_max_mb()} MB",
+        f"💾 Temp storage: {temp_mb:.1f} MB / {config.TEMP_LIMIT_MB} MB",
+        f"⬇️ Active downloads: {1 if download_semaphore.locked() else 0}",
+        f"📈 Today: {stats['today_downloads']} downloads",
+        f"👥 Total users: {stats['total_users']}",
+        f"🕐 Uptime: {format_uptime(time.time() - config.START_TIME)}",
+        ytdlp_line,
+        "🎞 ffmpeg: available" if config.FFMPEG_AVAILABLE else "⚠️ ffmpeg missing: merged formats only",
+    ]
+    await message.reply_text("\n".join(lines))
