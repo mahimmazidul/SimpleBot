@@ -47,3 +47,7 @@ class FileTooLargeError(DownloadError):
             self.user_message = (
                 f"❌ File is {size_mb:.0f} MB, over the {limit_mb} MB limit. Pick a lower quality."
             )
+
+
+class DurationExceededError(DownloadError):
+    user_message = f"❌ Video exceeds {MAX_DURATION_SEC // 60} minute limit."
