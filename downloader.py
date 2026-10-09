@@ -127,3 +127,15 @@ def check_metadata(info: dict[str, Any]) -> None:
         raise DRMProtectedError()
     if (info.get("duration") or 0) > config.MAX_DURATION_SEC:
         raise DurationExceededError()
+
+
+def estimate_bytes(stream: dict[str, Any] | None, duration: float | None) -> float:
+    if stream is None:
+        return 0.0
+    declared_size = stream.get("filesize") or stream.get("filesize_approx")
+    if declared_size:
+        return float(declared_size)
+    bitrate_kbps = stream.get("tbr") or 0
+    if bitrate_kbps and duration:
+        return bitrate_kbps * 125 * duration
+    return 0.0
