@@ -384,3 +384,17 @@ async def audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if await is_cooling_down(message, user.id):
         return
     await process_url(update, context, url, "audio")
+
+
+async def quality_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    user = update.effective_user
+    if message is None or user is None:
+        return
+    url = find_command_url(message, context)
+    if url is None:
+        await message.reply_text("Usage: /quality <url> or reply to a message containing a link.")
+        return
+    if await is_cooling_down(message, user.id):
+        return
+    await process_url(update, context, url, "manual")
