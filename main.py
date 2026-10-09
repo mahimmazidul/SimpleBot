@@ -240,3 +240,28 @@ def find_cookie_file(url: str) -> str | None:
         if os.path.isfile(candidate_path):
             return candidate_path
     return None
+
+
+def build_download_options(unique_id: str, format_selector: str, cookie_path: str | None) -> dict[str, Any]:
+    options: dict[str, Any] = {
+        "outtmpl": os.path.join(TEMP_DIR, f"{unique_id}.%(ext)s"),
+        "format": format_selector,
+        "merge_output_format": "mp4",
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "concurrent_fragment_downloads": 1,
+        "buffersize": 1024,
+        "socket_timeout": 30,
+        "retries": 3,
+        "fragment_retries": 3,
+        "max_filesize": effective_max_megabytes() * MEGABYTE,
+        "writethumbnail": False,
+        "writeinfojson": False,
+        "writesubtitles": False,
+        "writedescription": False,
+        "keepvideo": False,
+    }
+    if cookie_path:
+        options["cookiefile"] = cookie_path
+    return options
