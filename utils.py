@@ -42,3 +42,12 @@ def human_size(size_bytes: float) -> str:
             return f"{value:.2f} {unit}"
         value /= 1024
     return f"{value:.2f} GB"
+
+
+def human_duration(seconds: float) -> str:
+    total = int(seconds)
+    hours, remainder = divmod(total, 3600)
+    minutes, secs = divmod(remainder, 60)
+    if hours:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
