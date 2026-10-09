@@ -141,3 +141,37 @@ def get_global_stats() -> dict[str, Any]:
         "today_downloads": today["total"],
         "top_sites": [(row["site"], row["total"]) for row in top_sites],
     }
+
+
+def get_detailed_stats() -> dict[str, Any]:
+    with closing(open_connection()) as connection:
+        attempts = connection.execute("SELECT COUNT(*) AS total FROM downloads").fetchone()["total"]
+        failures = connection.execute("SELECT COUNT(*) AS total FROM downloads WHERE success = 0").fetchone()["total"]
+        by_site = connection.execute(
+            "SELECT site, COUNT(*) AS total FROM downloads WHERE success = 1 AND site IS NOT NULL "
+            "GROUP BY site ORDER BY total DESC LIMIT 10"
+        ).fetchall()
+        by_resolution = connection.execute(
+            "SELECT resolution, COUNT(*) AS total FROM downloads WHERE success = 1 AND resolution IS NOT NULL "
+            "GROUP BY resolution ORDER BY total DESC"
+        ).fetchall()
+        by_day = connection.execute(
+            "SELECT date(created_at) AS day, COUNT(*) AS total FROM downloads "
+            "WHERE created_at >= datetime('now', '-7 days') GROUP BY day ORDER BY day DESC"
+        ).fetchall()
+        errors = connection.execute(
+            "SELECT error_type, COUNT(*) AS total FROM downloads WHERE success = 0 AND error_type IS NOT NULL "
+            "GROUP BY error_type ORDER BY total DESC LIMIT 10"
+        ).fetchall()
+        top_users = connection.execute(
+            "SELECT user_id, total_downloads FROM users ORDER BY total_downloads DESC LIMIT 5"
+        ).fetchall()
+    return {
+        "attempts": attempts,
+        "failures": failures,
+        "by_site": [(row["site"], row["total"]) for row in by_site],
+        "by_resolution": [(row["resolution"], row["total"]) for row in by_resolution],
+        "by_day": [(row["day"], row["total"]) for row in by_day],
+        "errors": [(row["error_type"], row["total"]) for row in errors],
+        "top_users": [(row["user_id"], row["total_downloads"]) for row in top_users],
+    }
