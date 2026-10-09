@@ -32,3 +32,12 @@ MEMORY_PRESSURE_MB = 150
 DISPLAY_TIMEZONE = "Asia/Dhaka"
 
 FFMPEG_AVAILABLE = shutil.which("ffmpeg") is not None
+
+
+def validate() -> None:
+    if not BOT_TOKEN:
+        raise SystemExit("BOT_TOKEN is required. Set it in .env or the environment.")
+    for directory in (TEMP_DIR, COOKIES_DIR, LOG_DIR):
+        os.makedirs(directory, exist_ok=True)
+    parent = os.path.dirname(os.path.abspath(DB_PATH))
+    os.makedirs(parent, exist_ok=True)
