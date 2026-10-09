@@ -165,3 +165,15 @@ def estimate_quality_sizes(info: dict[str, Any]) -> dict[int, float]:
     if best_audio is not None:
         sizes[0] = audio_mb
     return sizes
+
+
+def select_auto_format(info: dict[str, Any]) -> tuple[int, bool]:
+    sizes = estimate_quality_sizes(info)
+    heights = sorted((height for height in sizes if height > 0), reverse=True)
+    if not heights:
+        raise FormatUnavailableError()
+    limit_mb = api_manager.get_effective_max_mb()
+    for height in heights:
+        if sizes[height] <= limit_mb:
+            return height, True
+    return heights[-1], False
