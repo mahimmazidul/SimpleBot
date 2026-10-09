@@ -588,3 +588,33 @@ async def deliver_quality(
         await edit_status(status_message, "❌ Something went wrong.")
     finally:
         await asyncio.to_thread(delete_downloads_for, unique_id)
+
+
+async def handle_quality_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query: CallbackQuery | None = update.callback_query
+    if query is None or query.data is None or not isinstance(query.message, Message):
+        return
+    parts = query.data.split("|")
+    if len(parts) != 3 or not parts[2].isdigit():
+        await query.answer()
+        return
+    requests = context.user_data.get("requests", {}) if context.user_data else {}
+    request = requests.get(parts[1])
+    tier_index = int(parts[2])
+    if request is None or tier_index >= len(request["tiers"]):
+        await query.answer("This request expired. Send the link again.", show_alert=True)
+        return
+    tier = request["tiers"][tier_index]
+    limit_mb = effective_max_megabytes()
+    if tier["size_mb"] > limit_mb:
+        await query.answer(
+            f"🔒 This quality is {tier['size_mb']:.0f} MB. Max allowed is {limit_mb} MB. "
+            "Set up the Local Bot API Server to unlock.",
+            show_alert=True,
+        )
+        return
+    await query.answer()
+    if download_semaphore.locked():
+        await edit_status(query.message, "⏳ Queued. Another download is in progress...")
+    async with download_semaphore:
+        await deliver_quality(context, query.message, request, tier)
