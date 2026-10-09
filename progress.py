@@ -50,3 +50,6 @@ class ProgressTracker:
             f"{' · ⏱ ' + human_duration(eta) if eta else ''}"
         )
         self.schedule(self.edit_text(text))
+
+    def schedule(self, coroutine: Coroutine[Any, Any, None]) -> None:
+        asyncio.run_coroutine_threadsafe(coroutine, self.loop)
