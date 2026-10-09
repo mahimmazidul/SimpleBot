@@ -60,3 +60,8 @@ class ApiManager:
                 logger.error("Could not initialize local Bot API client: %s", error)
                 return
             logger.warning("Local API is back. Large file support re-enabled.")
+
+    def get_effective_max_mb(self) -> int:
+        if self.local_api_available:
+            return config.MAX_FILE_SIZE_MB
+        return min(config.MAX_FILE_SIZE_MB, config.PUBLIC_API_LIMIT_MB)
