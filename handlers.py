@@ -55,3 +55,7 @@ START_TEMPLATE = (
     "{local_api_status_line}\n"
     "{today_stats_line}"
 )
+
+
+download_semaphore = asyncio.Semaphore(config.MAX_CONCURRENT)
+user_last_request: dict[int, float] = {}
