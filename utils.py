@@ -94,3 +94,11 @@ def format_caption(
         lines.append(f"⏱ {human_duration(duration)}")
     lines.append(f"📦 {file_size_mb:.1f} MB")
     return "\n".join(lines)[:1024]
+
+
+def yt_dlp_age_days() -> int:
+    try:
+        year, month, day = (int(part) for part in yt_dlp.version.__version__.split(".")[:3])
+        return (date.today() - date(year, month, day)).days
+    except (ValueError, TypeError):
+        return -1
