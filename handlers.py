@@ -362,3 +362,11 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     mode = "auto" if config.AUTO_QUALITY else "manual"
     for url in urls:
         await process_url(update, context, url, mode)
+
+
+def find_command_url(message: Message, context: ContextTypes.DEFAULT_TYPE) -> str | None:
+    candidates = " ".join(context.args or [])
+    if not candidates and message.reply_to_message is not None and message.reply_to_message.text:
+        candidates = message.reply_to_message.text
+    urls = extract_urls(candidates)
+    return urls[0] if urls else None
