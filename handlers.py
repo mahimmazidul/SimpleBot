@@ -562,3 +562,12 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         *[f"• {user_id}: {count}" for user_id, count in detailed["top_users"]],
     ]
     await message.reply_text("\n".join(lines)[:4000])
+
+
+async def global_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error("Unhandled exception", exc_info=context.error)
+    if isinstance(update, Update) and update.effective_message is not None:
+        try:
+            await update.effective_message.reply_text("❌ Something went wrong.")
+        except TelegramError:
+            pass
