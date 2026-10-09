@@ -31,3 +31,9 @@ CREATE TABLE IF NOT EXISTS users (
     total_downloads INTEGER DEFAULT 0
 );
 """
+
+
+def open_connection() -> sqlite3.Connection:
+    connection = sqlite3.connect(config.DB_PATH, timeout=10)
+    connection.row_factory = sqlite3.Row
+    return connection
