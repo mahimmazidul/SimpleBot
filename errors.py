@@ -91,3 +91,11 @@ ERROR_PATTERNS: tuple[tuple[str, type[DownloadError]], ...] = (
     (r"extractor error|bug report|report this issue", ExtractorBrokenError),
     (r"unsupported url|unsupported|no suitable extractor", UnsupportedSiteError),
 )
+
+
+def classify_ytdlp_error(error_string: str) -> DownloadError:
+    lowered = error_string.lower()
+    for pattern, error_class in ERROR_PATTERNS:
+        if re.search(pattern, lowered):
+            return error_class(error_string)
+    return UnknownDownloadError(error_string)
