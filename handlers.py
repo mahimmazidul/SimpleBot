@@ -59,3 +59,12 @@ START_TEMPLATE = (
 
 download_semaphore = asyncio.Semaphore(config.MAX_CONCURRENT)
 user_last_request: dict[int, float] = {}
+
+
+def check_cooldown(user_id: int) -> float:
+    now = time.monotonic()
+    last_seen = user_last_request.get(user_id)
+    if last_seen is not None and now - last_seen < config.USER_COOLDOWN_SEC:
+        return config.USER_COOLDOWN_SEC - (now - last_seen)
+    user_last_request[user_id] = now
+    return 0.0
