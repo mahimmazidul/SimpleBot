@@ -35,3 +35,12 @@ def startup_cleanup() -> None:
         stale_paths = [entry.path for entry in entries if entry.is_file() and not entry.name.startswith(".")]
     for path in stale_paths:
         delete_file_safe(path)
+
+
+def periodic_cleanup(max_age_sec: int = 900) -> int:
+    cutoff = time.time() - max_age_sec
+    with os.scandir(config.TEMP_DIR) as entries:
+        stale_paths = [entry.path for entry in entries if entry.is_file() and entry.stat().st_mtime < cutoff]
+    for path in stale_paths:
+        delete_file_safe(path)
+    return len(stale_paths)
