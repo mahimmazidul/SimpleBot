@@ -30,3 +30,12 @@ def setup_logging() -> None:
     root_logger.handlers = [file_handler, stream_handler]
     for noisy_name in ("httpx", "telegram", "yt_dlp"):
         logging.getLogger(noisy_name).setLevel(logging.WARNING)
+
+
+async def post_init(application: Application) -> None:
+    await asyncio.to_thread(init_db)
+    await asyncio.to_thread(startup_cleanup)
+    await api_manager.init(config.BOT_TOKEN, config.LOCAL_API_URL)
+    if not config.FFMPEG_AVAILABLE:
+        logger.warning("ffmpeg not found. Using pre-merged formats only.")
+    logger.info("Bot started.")
