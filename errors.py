@@ -71,3 +71,7 @@ class RateLimitedError(DownloadError):
 
 class ExtractorBrokenError(DownloadError):
     user_message = "⚠️ This site's extractor is broken right now. Try again after an update."
+
+
+class UnknownDownloadError(DownloadError):
+    user_message = "❌ Download failed. Try again later."
