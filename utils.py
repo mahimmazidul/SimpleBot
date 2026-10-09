@@ -76,3 +76,21 @@ def extract_site_name(url: str) -> str:
 
 def is_admin(user_id: int) -> bool:
     return user_id in config.ADMIN_IDS
+
+
+def format_caption(
+    title: str,
+    site: str | None,
+    resolution: str | None,
+    duration: int | None,
+    file_size_mb: float,
+) -> str:
+    lines = [f"🎬 {title}"]
+    if site:
+        lines.append(f"🌐 {site}")
+    if resolution:
+        lines.append(f"📺 {resolution}")
+    if duration:
+        lines.append(f"⏱ {human_duration(duration)}")
+    lines.append(f"📦 {file_size_mb:.1f} MB")
+    return "\n".join(lines)[:1024]
