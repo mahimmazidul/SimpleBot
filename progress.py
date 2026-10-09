@@ -53,3 +53,16 @@ class ProgressTracker:
 
     def schedule(self, coroutine: Coroutine[Any, Any, None]) -> None:
         asyncio.run_coroutine_threadsafe(coroutine, self.loop)
+
+    async def edit_text(self, text: str) -> None:
+        try:
+            await self.bot.edit_message_text(chat_id=self.chat_id, message_id=self.message_id, text=text)
+        except RetryAfter as error:
+            retry_seconds = (
+                error.retry_after.total_seconds()
+                if isinstance(error.retry_after, timedelta)
+                else float(error.retry_after)
+            )
+            self.blocked_until = time.time() + retry_seconds
+        except TelegramError:
+            pass
