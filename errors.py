@@ -18,3 +18,7 @@ class LoginRequiredError(DownloadError):
 
 class GeoBlockedError(DownloadError):
     user_message = "🌍 Not available in this region."
+
+
+class UnsupportedSiteError(DownloadError):
+    user_message = "❌ This site is not supported."
