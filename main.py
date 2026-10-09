@@ -265,3 +265,9 @@ def build_download_options(unique_id: str, format_selector: str, cookie_path: st
     if cookie_path:
         options["cookiefile"] = cookie_path
     return options
+
+
+def download_media(url: str, unique_id: str, format_selector: str, cookie_path: str | None) -> dict[str, Any]:
+    options = build_download_options(unique_id, format_selector, cookie_path)
+    with yt_dlp.YoutubeDL(options) as ydl:
+        return ydl.extract_info(url, download=True)
