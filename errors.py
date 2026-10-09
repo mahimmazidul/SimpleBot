@@ -30,3 +30,7 @@ class NotFoundError(DownloadError):
 
 class LiveStreamError(DownloadError):
     user_message = "❌ Live streams and premieres are not supported."
+
+
+class DRMProtectedError(DownloadError):
+    user_message = "🔐 This video is DRM-protected and cannot be downloaded."
