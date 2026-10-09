@@ -28,3 +28,10 @@ def get_temp_usage_mb() -> float:
     with os.scandir(config.TEMP_DIR) as entries:
         total_bytes = sum(entry.stat().st_size for entry in entries if entry.is_file())
     return total_bytes / config.MEGABYTE
+
+
+def startup_cleanup() -> None:
+    with os.scandir(config.TEMP_DIR) as entries:
+        stale_paths = [entry.path for entry in entries if entry.is_file() and not entry.name.startswith(".")]
+    for path in stale_paths:
+        delete_file_safe(path)
