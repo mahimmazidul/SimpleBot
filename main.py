@@ -627,3 +627,30 @@ async def global_error_handler(update: object, context: ContextTypes.DEFAULT_TYP
             await update.effective_message.reply_text("❌ Something went wrong.")
         except TelegramError:
             pass
+
+
+def build_application() -> Application:
+    application = (
+        ApplicationBuilder()
+        .token(BOT_TOKEN)
+        .concurrent_updates(2)
+        .read_timeout(60)
+        .write_timeout(60)
+        .pool_timeout(60)
+        .post_init(post_init)
+        .post_shutdown(post_shutdown)
+        .build()
+    )
+    application.add_handler(CommandHandler("start", start_command))
+    application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("status", status_command))
+    application.add_handler(CommandHandler("cookies", cookies_command))
+    application.add_handler(CallbackQueryHandler(handle_quality_callback, pattern=r"^dl\|"))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
+    application.add_error_handler(global_error_handler)
+    application.job_queue.run_repeating(
+        periodic_cleanup_job,
+        interval=CLEANUP_INTERVAL_SECONDS,
+        first=CLEANUP_INTERVAL_SECONDS,
+    )
+    return application
