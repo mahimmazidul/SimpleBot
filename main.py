@@ -86,3 +86,8 @@ def wipe_temp_directory() -> None:
         stale_paths = [entry.path for entry in entries if entry.is_file() and not entry.name.startswith(".")]
     for stale_path in stale_paths:
         delete_file_quietly(stale_path)
+
+
+def delete_downloads_for(unique_id: str) -> None:
+    for path in glob.glob(os.path.join(TEMP_DIR, f"{unique_id}*")):
+        delete_file_quietly(path)
