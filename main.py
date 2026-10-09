@@ -450,3 +450,32 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         f"Active downloads: {active_count} / 1",
     ]
     await message.reply_text("\n".join(lines))
+
+
+async def cookies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    user = update.effective_user
+    if message is None or user is None or not is_admin(user.id):
+        return
+    replied = message.reply_to_message
+    if not context.args or replied is None or replied.document is None:
+        await message.reply_text("Usage: reply to a cookie .txt file with /cookies <site>")
+        return
+    site = re.sub(r"[^a-z0-9_-]", "", context.args[0].lower())
+    if not site:
+        await message.reply_text("❌ Invalid site name.")
+        return
+    document = replied.document
+    if document.file_size and document.file_size > COOKIE_UPLOAD_LIMIT_BYTES:
+        await message.reply_text("❌ Cookie file is too large.")
+        return
+    staging_path = os.path.join(COOKIES_DIR, f"{site}.upload")
+    target_path = os.path.join(COOKIES_DIR, f"{site}.txt")
+    telegram_file = await document.get_file()
+    await telegram_file.download_to_drive(staging_path)
+    if not await asyncio.to_thread(is_netscape_cookie_file, staging_path):
+        await asyncio.to_thread(delete_file_quietly, staging_path)
+        await message.reply_text("❌ Not a Netscape cookie file. Export with 'Get cookies.txt LOCALLY'.")
+        return
+    await asyncio.to_thread(os.replace, staging_path, target_path)
+    await message.reply_text(f"✅ Saved cookies for {site}.")
