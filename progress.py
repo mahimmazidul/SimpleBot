@@ -7,6 +7,8 @@ from typing import Any
 from telegram import Bot
 from telegram.error import RetryAfter, TelegramError
 
+import messages as msg
+from messages import render
 from utils import human_duration, human_size
 
 
@@ -23,7 +25,7 @@ class ProgressTracker:
     def hook(self, data: dict[str, Any]) -> None:
         status = data.get("status")
         if status == "finished":
-            self.schedule(self.edit_text("🔄 Processing..."))
+            self.schedule(self.edit_text(msg.PROCESSING))
             return
         if status != "downloading":
             return
@@ -42,12 +44,15 @@ class ProgressTracker:
         speed = data.get("speed") or 0
         eta = data.get("eta") or 0
         filled = percentage // 10
-        bar = "█" * filled + "░" * (10 - filled)
-        text = (
-            f"⬇️ {bar} {percentage}%\n"
-            f"📦 {human_size(downloaded)} / {human_size(total)}\n"
-            f"⚡ {human_size(speed)}/s"
-            f"{' · ⏱ ' + human_duration(eta) if eta else ''}"
+        bar = msg.BAR_FILLED * filled + msg.BAR_EMPTY * (10 - filled)
+        eta_text = msg.ETA_LINE.format(eta=human_duration(eta)) if eta else ""
+        text = msg.PROGRESS_LINE.format(
+            bar=bar,
+            percentage=percentage,
+            downloaded=human_size(downloaded),
+            total=human_size(total),
+            speed=human_size(speed),
+            eta=eta_text,
         )
         self.schedule(self.edit_text(text))
 
@@ -56,7 +61,11 @@ class ProgressTracker:
 
     async def edit_text(self, text: str) -> None:
         try:
-            await self.bot.edit_message_text(chat_id=self.chat_id, message_id=self.message_id, text=text)
+            await self.bot.edit_message_text(
+                chat_id=self.chat_id,
+                message_id=self.message_id,
+                text=render(text),
+            )
         except RetryAfter as error:
             retry_seconds = (
                 error.retry_after.total_seconds()
