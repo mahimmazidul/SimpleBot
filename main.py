@@ -139,3 +139,15 @@ def effective_max_megabytes() -> int:
     if local_api_available:
         return MAX_FILE_SIZE_MB
     return min(MAX_FILE_SIZE_MB, PUBLIC_API_LIMIT_MB)
+
+
+def estimate_stream_bytes(stream: dict[str, Any] | None, duration: float | None) -> float:
+    if stream is None:
+        return 0.0
+    declared_size = stream.get("filesize") or stream.get("filesize_approx")
+    if declared_size:
+        return float(declared_size)
+    bitrate_kbps = stream.get("tbr") or 0
+    if bitrate_kbps and duration:
+        return bitrate_kbps * 125 * duration
+    return 0.0
