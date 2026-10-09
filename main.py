@@ -435,3 +435,18 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             minutes=MAX_DURATION_SEC // 60,
         )
     )
+
+
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    if message is None:
+        return
+    temp_mb = await asyncio.to_thread(temp_usage_megabytes)
+    active_count = 1 if download_semaphore.locked() else 0
+    lines = [
+        f"Local API: {'connected' if local_api_available else 'not connected'}",
+        f"Effective max file size: {effective_max_megabytes()} MB",
+        f"Temp usage: {temp_mb:.1f} / {TEMP_STORAGE_LIMIT_MB} MB",
+        f"Active downloads: {active_count} / 1",
+    ]
+    await message.reply_text("\n".join(lines))
