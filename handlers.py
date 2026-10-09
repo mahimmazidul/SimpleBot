@@ -133,3 +133,9 @@ async def record_outcome(
         await asyncio.to_thread(record_download, user_id, url, site, resolution, size_mb, duration, success, error_type)
     except Exception:
         logger.exception("Could not record download statistics")
+
+
+def make_quality_button(label: str, size_mb: float, limit_mb: int, callback_data: str) -> InlineKeyboardButton:
+    size_text = f" ~{size_mb:.0f}MB" if size_mb > 0 else ""
+    lock_text = " 🔒" if size_mb > limit_mb else ""
+    return InlineKeyboardButton(f"{label}{size_text}{lock_text}", callback_data=callback_data)
