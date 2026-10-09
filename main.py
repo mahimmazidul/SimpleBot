@@ -314,3 +314,14 @@ def is_netscape_cookie_file(path: str) -> bool:
     except OSError:
         return False
     return "Netscape HTTP Cookie File" in head or "HTTP Cookie File" in head
+
+
+async def probe_local_api() -> bool:
+    if not LOCAL_API_URL:
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=PROBE_TIMEOUT_SECONDS) as client:
+            response = await client.get(f"{LOCAL_API_URL}/bot{BOT_TOKEN}/getMe")
+    except httpx.HTTPError:
+        return False
+    return response.status_code == 200
