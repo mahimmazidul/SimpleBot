@@ -22,3 +22,9 @@ def delete_file_safe(path: str) -> None:
 def cleanup_by_id(unique_id: str) -> None:
     for path in glob.glob(os.path.join(config.TEMP_DIR, f"{unique_id}*")):
         delete_file_safe(path)
+
+
+def get_temp_usage_mb() -> float:
+    with os.scandir(config.TEMP_DIR) as entries:
+        total_bytes = sum(entry.stat().st_size for entry in entries if entry.is_file())
+    return total_bytes / config.MEGABYTE
