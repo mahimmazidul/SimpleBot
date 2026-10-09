@@ -110,3 +110,10 @@ def translate_ytdlp_error(error: Exception, cookie_path: str | None) -> Download
     if isinstance(translated, LoginRequiredError) and cookie_path is not None:
         mark_cookie_stale(cookie_path)
     return translated
+
+
+async def fetch_metadata(url: str, cookie_path: str | None) -> dict[str, Any]:
+    try:
+        return await asyncio.to_thread(extract_metadata, url, cookie_path)
+    except yt_dlp.utils.YoutubeDLError as error:
+        raise (await asyncio.to_thread(translate_ytdlp_error, error, cookie_path)) from error
