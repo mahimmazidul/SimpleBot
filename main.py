@@ -165,3 +165,54 @@ def fetch_video_information(url: str, cookie_path: str | None) -> dict[str, Any]
         options["cookiefile"] = cookie_path
     with yt_dlp.YoutubeDL(options) as ydl:
         return ydl.extract_info(url, download=False)
+
+
+def build_quality_tiers(info: dict[str, Any]) -> list[dict[str, Any]]:
+    formats = info.get("formats") or []
+    duration = info.get("duration")
+    videos = [item for item in formats if item.get("vcodec") not in (None, "none") and item.get("height")]
+    audios = [
+        item
+        for item in formats
+        if item.get("acodec") not in (None, "none") and item.get("vcodec") in (None, "none")
+    ]
+    best_audio = max(audios, key=lambda item: item.get("abr") or item.get("tbr") or 0, default=None)
+    audio_bytes = estimate_stream_bytes(best_audio, duration)
+    tiers: list[dict[str, Any]] = []
+    seen_heights: set[int] = set()
+    for height_limit in (None, 720, 480, 360):
+        candidates = [item for item in videos if height_limit is None or item["height"] <= height_limit]
+        if not candidates:
+            continue
+        video = max(candidates, key=lambda item: (item["height"], item.get("tbr") or 0))
+        if video["height"] in seen_heights:
+            continue
+        seen_heights.add(video["height"])
+        size_bytes = estimate_stream_bytes(video, duration)
+        if video.get("acodec") in (None, "none"):
+            size_bytes += audio_bytes
+        if height_limit is None:
+            selector = "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best"
+        else:
+            selector = (
+                f"bestvideo[height<={height_limit}][ext=mp4]+bestaudio[ext=m4a]/"
+                f"bestvideo[height<={height_limit}]+bestaudio/best[height<={height_limit}]"
+            )
+        tiers.append(
+            {
+                "title": f"{video['height']}p",
+                "size_mb": size_bytes / MEGABYTE,
+                "format": selector,
+                "is_audio": False,
+            }
+        )
+    if best_audio is not None:
+        tiers.append(
+            {
+                "title": "Audio",
+                "size_mb": audio_bytes / MEGABYTE,
+                "format": "bestaudio[ext=m4a]/bestaudio",
+                "is_audio": True,
+            }
+        )
+    return tiers
