@@ -24,3 +24,9 @@ USER_COOLDOWN_SEC = int(os.getenv("USER_COOLDOWN_SEC", "5"))
 MAX_CONCURRENT = int(os.getenv("MAX_CONCURRENT", "1"))
 AUTO_QUALITY = os.getenv("AUTO_QUALITY", "true").strip().lower() in ("1", "true", "yes", "on")
 BATCH_LIMIT = int(os.getenv("BATCH_LIMIT", "3"))
+
+MEGABYTE = 1024 * 1024
+PUBLIC_API_LIMIT_MB = 50
+PROBE_TIMEOUT_SEC = 3
+MEMORY_PRESSURE_MB = 150
+DISPLAY_TIMEZONE = "Asia/Dhaka"
