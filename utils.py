@@ -58,3 +58,8 @@ def format_uptime(seconds: float) -> str:
     hours, remainder = divmod(remainder, 3600)
     minutes = remainder // 60
     return f"{days}d {hours}h {minutes}m"
+
+
+def sanitize_filename(name: str, max_len: int = 100) -> str:
+    cleaned = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "", name).strip()
+    return cleaned[:max_len] or "video"
