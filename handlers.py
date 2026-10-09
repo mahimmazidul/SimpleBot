@@ -512,3 +512,25 @@ async def cookie_document_handler(update: Update, context: ContextTypes.DEFAULT_
         return
     await asyncio.to_thread(os.replace, staging_path, target_path)
     await message.reply_text(f"✅ Saved cookies for {site}.")
+
+
+async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    user = update.effective_user
+    if message is None or user is None or not is_admin(user.id):
+        return
+    text = " ".join(context.args or []).strip()
+    if not text:
+        await message.reply_text("Usage: /broadcast <message>")
+        return
+    user_ids = await asyncio.to_thread(get_all_user_ids)
+    sent = 0
+    failed = 0
+    for target_id in user_ids:
+        try:
+            await context.bot.send_message(chat_id=target_id, text=text)
+            sent += 1
+        except TelegramError:
+            failed += 1
+        await asyncio.sleep(0.05)
+    await message.reply_text(f"📣 Broadcast done. Sent: {sent}, failed: {failed}.")
