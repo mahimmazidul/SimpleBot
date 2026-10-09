@@ -97,3 +97,7 @@ def temp_usage_megabytes() -> float:
     with os.scandir(TEMP_DIR) as entries:
         total_bytes = sum(entry.stat().st_size for entry in entries if entry.is_file())
     return total_bytes / MEGABYTE
+
+
+def file_size_megabytes(file_path: str) -> float:
+    return os.path.getsize(file_path) / MEGABYTE
