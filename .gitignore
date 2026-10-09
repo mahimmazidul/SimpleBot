@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+cookies/*.txt
+cookies/*.upload
+cookies/*.stale
+temp/*
+!temp/.gitkeep
+!cookies/.gitkeep
