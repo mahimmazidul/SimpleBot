@@ -83,3 +83,6 @@ class ApiManager:
                 await bot.shutdown()
             except Exception:
                 logger.exception("Bot shutdown failed")
+
+
+api_manager = ApiManager()
