@@ -33,3 +33,12 @@ def extract_urls(text: str) -> list[str]:
 def is_fetchable_url(url: str) -> bool:
     parsed = urlparse(url)
     return parsed.scheme in ("http", "https") and bool(parsed.hostname)
+
+
+def human_size(size_bytes: float) -> str:
+    value = float(size_bytes)
+    for unit in ("B", "KB", "MB"):
+        if value < 1024:
+            return f"{value:.2f} {unit}"
+        value /= 1024
+    return f"{value:.2f} GB"
