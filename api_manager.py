@@ -65,3 +65,10 @@ class ApiManager:
         if self.local_api_available:
             return config.MAX_FILE_SIZE_MB
         return min(config.MAX_FILE_SIZE_MB, config.PUBLIC_API_LIMIT_MB)
+
+    def get_sender(self, file_size_mb: float) -> Bot | None:
+        if file_size_mb <= config.PUBLIC_API_LIMIT_MB:
+            return self.public_bot
+        if self.local_api_available and self.local_bot is not None:
+            return self.local_bot
+        return None
