@@ -236,3 +236,28 @@ def find_downloaded_file(unique_id: str) -> str | None:
     if not candidates:
         return None
     return max(candidates, key=os.path.getsize)
+
+
+async def build_download_result(
+    url: str,
+    unique_id: str,
+    resolution: int | None,
+    downloaded_info: dict[str, Any],
+) -> DownloadResult:
+    file_path = await asyncio.to_thread(find_downloaded_file, unique_id)
+    if file_path is None:
+        raise UnknownDownloadError("No output file was produced.")
+    size_mb = await asyncio.to_thread(file_size_megabytes, file_path)
+    limit_mb = api_manager.get_effective_max_mb()
+    if size_mb > limit_mb:
+        await asyncio.to_thread(delete_file_safe, file_path)
+        raise FileTooLargeError(size_mb=size_mb, limit_mb=limit_mb)
+    height = downloaded_info.get("height")
+    return DownloadResult(
+        file_path=file_path,
+        title=str(downloaded_info.get("title") or "video")[:200],
+        duration=int(downloaded_info.get("duration") or 0),
+        site=downloaded_info.get("webpage_url_domain") or extract_site_name(url),
+        resolution=int(height) if height else resolution,
+        size_mb=size_mb,
+    )
