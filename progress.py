@@ -19,3 +19,34 @@ class ProgressTracker:
         self.last_edit_time = 0.0
         self.blocked_until = 0.0
         self.last_percentage = -1
+
+    def hook(self, data: dict[str, Any]) -> None:
+        status = data.get("status")
+        if status == "finished":
+            self.schedule(self.edit_text("🔄 Processing..."))
+            return
+        if status != "downloading":
+            return
+        total = data.get("total_bytes") or data.get("total_bytes_estimate") or 0
+        if total <= 0:
+            return
+        downloaded = data.get("downloaded_bytes") or 0
+        percentage = min(100, int(downloaded * 100 / total))
+        if percentage == self.last_percentage:
+            return
+        now = time.time()
+        if now - self.last_edit_time < 3 or now < self.blocked_until:
+            return
+        self.last_edit_time = now
+        self.last_percentage = percentage
+        speed = data.get("speed") or 0
+        eta = data.get("eta") or 0
+        filled = percentage // 10
+        bar = "█" * filled + "░" * (10 - filled)
+        text = (
+            f"⬇️ {bar} {percentage}%\n"
+            f"📦 {human_size(downloaded)} / {human_size(total)}\n"
+            f"⚡ {human_size(speed)}/s"
+            f"{' · ⏱ ' + human_duration(eta) if eta else ''}"
+        )
+        self.schedule(self.edit_text(text))
