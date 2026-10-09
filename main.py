@@ -28,3 +28,14 @@ try:
     import uvloop
 except ImportError:
     uvloop = None
+
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
+if not BOT_TOKEN:
+    raise SystemExit("BOT_TOKEN is required. Set it in the environment or in .env.")
+LOCAL_API_URL = os.environ.get("LOCAL_API_URL", "").strip().rstrip("/")
+MAX_FILE_SIZE_MB = int(os.environ.get("MAX_FILE_SIZE_MB", "2000"))
+MAX_DURATION_SEC = int(os.environ.get("MAX_DURATION_SEC", "3600"))
+TEMP_DIR = os.environ.get("TEMP_DIR", "./temp")
+COOKIES_DIR = os.environ.get("COOKIES_DIR", "./cookies")
+LOG_LEVEL = os.environ.get("LOG_LEVEL", "ERROR").strip().upper()
+ADMIN_IDS = {int(item) for item in os.environ.get("ADMIN_IDS", "").split(",") if item.strip()}
