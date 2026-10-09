@@ -479,3 +479,57 @@ async def cookies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
     await asyncio.to_thread(os.replace, staging_path, target_path)
     await message.reply_text(f"✅ Saved cookies for {site}.")
+
+
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    user = update.effective_user
+    if message is None or message.text is None or user is None:
+        return
+    urls = extract_urls(message.text)
+    if not urls:
+        return
+    url = urls[0]
+    wait_seconds = check_user_cooldown(user.id)
+    if wait_seconds > 0:
+        await message.reply_text(f"⏳ Wait {wait_seconds:.0f}s before the next request.")
+        return
+    temp_mb = await asyncio.to_thread(temp_usage_megabytes)
+    if temp_mb > TEMP_STORAGE_LIMIT_MB:
+        await message.reply_text("⚠️ Server is busy storing files. Try again in a few minutes.")
+        return
+    status_message = await message.reply_text("🔍 Checking video...")
+    cookie_path = await asyncio.to_thread(find_cookie_file, url)
+    try:
+        info = await asyncio.to_thread(fetch_video_information, url, cookie_path)
+    except yt_dlp.utils.UnsupportedError:
+        await edit_status(status_message, "❌ Site not supported.")
+        return
+    except yt_dlp.utils.DownloadError as error:
+        await edit_status(status_message, await asyncio.to_thread(describe_download_failure, str(error), cookie_path))
+        return
+    except Exception:
+        logger.exception("Metadata fetch failed for %s", url)
+        await edit_status(status_message, "❌ Something went wrong.")
+        return
+    if info.get("is_live"):
+        await edit_status(status_message, "❌ Live streams are not supported.")
+        return
+    duration = int(info.get("duration") or 0)
+    if duration > MAX_DURATION_SEC:
+        await edit_status(status_message, f"❌ Video exceeds {MAX_DURATION_SEC // 60} minute limit.")
+        return
+    tiers = build_quality_tiers(info)
+    if not tiers:
+        await edit_status(status_message, "❌ No downloadable formats found.")
+        return
+    token = uuid.uuid4().hex[:8]
+    requests = context.user_data.setdefault("requests", {})
+    if len(requests) >= MAX_STORED_REQUESTS:
+        requests.pop(next(iter(requests)))
+    title = str(info.get("title") or "video")[:200]
+    requests[token] = {"url": url, "title": title, "duration": duration, "tiers": tiers}
+    text = f"🎬 {title}\nChoose a quality:"
+    if not local_api_available:
+        text += "\n⚠️ Local API not configured. Qualities above 50 MB will be unavailable."
+    await edit_status(status_message, text, build_keyboard(token, tiers))
