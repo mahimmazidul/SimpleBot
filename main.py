@@ -533,3 +533,58 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     if not local_api_available:
         text += "\n⚠️ Local API not configured. Qualities above 50 MB will be unavailable."
     await edit_status(status_message, text, build_keyboard(token, tiers))
+
+
+async def deliver_quality(
+    context: ContextTypes.DEFAULT_TYPE,
+    status_message: Message,
+    request: dict[str, Any],
+    tier: dict[str, Any],
+) -> None:
+    unique_id = uuid.uuid4().hex[:10]
+    cookie_path = await asyncio.to_thread(find_cookie_file, request["url"])
+    try:
+        await edit_status(status_message, "⬇️ Downloading...")
+        await asyncio.to_thread(download_media, request["url"], unique_id, tier["format"], cookie_path)
+        file_path = await asyncio.to_thread(find_downloaded_file, unique_id)
+        if file_path is None:
+            await edit_status(status_message, "❌ Download failed. Try again later.")
+            return
+        file_size_mb = await asyncio.to_thread(file_size_megabytes, file_path)
+        limit_mb = effective_max_megabytes()
+        if file_size_mb > limit_mb:
+            await asyncio.to_thread(delete_file_quietly, file_path)
+            if local_api_available:
+                text = f"❌ File is {file_size_mb:.0f} MB, over the {limit_mb} MB limit. Pick a lower quality."
+            else:
+                text = (
+                    f"⚠️ This file is {file_size_mb:.0f} MB. Files over 50 MB require the Local Bot API Server. "
+                    "Pick a lower quality or ask the admin to set it up."
+                )
+            await edit_status(status_message, text)
+            return
+        await edit_status(status_message, "📤 Uploading...")
+        await send_media_file(
+            context,
+            status_message.chat_id,
+            file_path,
+            request["title"],
+            request["duration"],
+            tier["is_audio"],
+        )
+        try:
+            await status_message.delete()
+        except TelegramError:
+            pass
+    except yt_dlp.utils.DownloadError as error:
+        await edit_status(status_message, await asyncio.to_thread(describe_download_failure, str(error), cookie_path))
+    except TimedOut:
+        await edit_status(status_message, "❌ Upload timed out.")
+    except TelegramError as error:
+        logger.error("Telegram send failed: %s", error)
+        await edit_status(status_message, "❌ Telegram upload failed.")
+    except Exception:
+        logger.exception("Download failed for %s", request["url"])
+        await edit_status(status_message, "❌ Something went wrong.")
+    finally:
+        await asyncio.to_thread(delete_downloads_for, unique_id)
