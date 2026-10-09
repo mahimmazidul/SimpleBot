@@ -56,3 +56,7 @@ async def storage_guard_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     within_limit = await asyncio.to_thread(enforce_storage_limit)
     if not within_limit:
         logger.warning("Temp storage remains above limit after cleanup.")
+
+
+async def api_health_check_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    await api_manager.health_check()
