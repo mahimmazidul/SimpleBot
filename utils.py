@@ -102,3 +102,15 @@ def yt_dlp_age_days() -> int:
         return (date.today() - date(year, month, day)).days
     except (ValueError, TypeError):
         return -1
+
+
+def is_memory_pressure() -> bool:
+    try:
+        with open("/proc/meminfo", "r", encoding="utf-8") as meminfo:
+            for line in meminfo:
+                if line.startswith("MemAvailable:"):
+                    available_kb = int(line.split()[1])
+                    return available_kb < config.MEMORY_PRESSURE_MB * 1024
+    except (OSError, ValueError, IndexError):
+        return False
+    return False
