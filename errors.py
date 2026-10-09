@@ -22,3 +22,7 @@ class GeoBlockedError(DownloadError):
 
 class UnsupportedSiteError(DownloadError):
     user_message = "❌ This site is not supported."
+
+
+class NotFoundError(DownloadError):
+    user_message = "❌ This video was not found. It may have been removed."
