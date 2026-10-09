@@ -37,3 +37,8 @@ def open_connection() -> sqlite3.Connection:
     connection = sqlite3.connect(config.DB_PATH, timeout=10)
     connection.row_factory = sqlite3.Row
     return connection
+
+
+def create_schema() -> None:
+    with closing(open_connection()) as connection, connection:
+        connection.executescript(SCHEMA)
