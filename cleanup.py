@@ -44,3 +44,10 @@ def periodic_cleanup(max_age_sec: int = 900) -> int:
     for path in stale_paths:
         delete_file_safe(path)
     return len(stale_paths)
+
+
+def enforce_storage_limit() -> bool:
+    if get_temp_usage_mb() <= config.TEMP_LIMIT_MB:
+        return True
+    periodic_cleanup(60)
+    return get_temp_usage_mb() <= config.TEMP_LIMIT_MB
