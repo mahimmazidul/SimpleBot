@@ -133,3 +133,9 @@ def check_user_cooldown(user_id: int) -> float:
 
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
+
+
+def effective_max_megabytes() -> int:
+    if local_api_available:
+        return MAX_FILE_SIZE_MB
+    return min(MAX_FILE_SIZE_MB, PUBLIC_API_LIMIT_MB)
