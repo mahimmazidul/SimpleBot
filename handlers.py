@@ -96,3 +96,9 @@ async def edit_status(
         await message.edit_text(text[:4000], reply_markup=reply_markup)
     except TelegramError as error:
         logger.error("Status edit failed: %s", error)
+
+
+def local_status_line() -> str:
+    if api_manager.local_api_available:
+        return f"✅ Large file support active (up to {api_manager.get_effective_max_mb()} MB)"
+    return "⚠️ Large files unavailable. Max 50 MB. Ask admin to set up Local API."
