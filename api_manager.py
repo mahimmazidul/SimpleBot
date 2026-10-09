@@ -42,3 +42,7 @@ class ApiManager:
         except httpx.HTTPError:
             return False
         return response.status_code == 200
+
+    async def create_local_bot(self) -> None:
+        self.local_bot = Bot(token=self.token, base_url=f"{self.local_url}/bot")
+        await self.local_bot.initialize()
