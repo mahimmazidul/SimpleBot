@@ -63,3 +63,7 @@ def format_uptime(seconds: float) -> str:
 def sanitize_filename(name: str, max_len: int = 100) -> str:
     cleaned = re.sub(r'[\\/:*?"<>|\x00-\x1f]', "", name).strip()
     return cleaned[:max_len] or "video"
+
+
+def random_ua() -> str:
+    return random.choice(MOBILE_UA_POOL)
