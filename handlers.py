@@ -68,3 +68,11 @@ def check_cooldown(user_id: int) -> float:
         return config.USER_COOLDOWN_SEC - (now - last_seen)
     user_last_request[user_id] = now
     return 0.0
+
+
+async def is_cooling_down(message: Message, user_id: int) -> bool:
+    remaining = check_cooldown(user_id)
+    if remaining > 0:
+        await message.reply_text(f"⏳ Wait {remaining:.0f}s before the next request.")
+        return True
+    return False
