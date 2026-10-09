@@ -60,3 +60,22 @@ async def storage_guard_job(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def api_health_check_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     await api_manager.health_check()
+
+
+def main() -> None:
+    config.validate()
+    setup_logging()
+    application = (
+        Application.builder()
+        .token(config.BOT_TOKEN)
+        .concurrent_updates(2)
+        .post_init(post_init)
+        .post_shutdown(post_shutdown)
+        .build()
+    )
+    register_handlers(application)
+    application.job_queue.run_repeating(periodic_cleanup_job, interval=600, first=60)
+    application.job_queue.run_repeating(storage_guard_job, interval=120, first=30)
+    if config.LOCAL_API_URL:
+        application.job_queue.run_repeating(api_health_check_job, interval=300, first=120)
+    application.run_polling(drop_pending_updates=True, allowed_updates=["message", "callback_query"])
