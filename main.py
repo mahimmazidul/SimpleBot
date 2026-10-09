@@ -340,3 +340,10 @@ async def post_init(application: Application) -> None:
             LOCAL_API_URL or "(unset)",
         )
     logger.info("Bot started. yt-dlp %s. Max file size %d MB.", yt_dlp.version.__version__, effective_max_megabytes())
+
+
+async def post_shutdown(application: Application) -> None:
+    if local_bot is not None:
+        await local_bot.shutdown()
+    await asyncio.to_thread(wipe_temp_directory)
+    logger.info("Bot shut down cleanly.")
