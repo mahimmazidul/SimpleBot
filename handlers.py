@@ -221,3 +221,60 @@ async def send_result(chat_id: int, result: DownloadResult, audio_only: bool) ->
         except TimedOut:
             if attempt == 1:
                 raise
+
+
+async def run_pipeline(
+    context: ContextTypes.DEFAULT_TYPE,
+    chat_id: int,
+    source_message_id: int,
+    status_message: Message,
+    request: dict[str, Any],
+    resolution: int | None,
+    audio_only: bool,
+    note: str = "",
+) -> None:
+    unique_id = uuid.uuid4().hex[:10]
+    cookie_path = await asyncio.to_thread(find_cookie_file, request["url"])
+    try:
+        if download_semaphore.locked():
+            await edit_status(status_message, f"{note}⏳ Queued. Another download is in progress...")
+        async with download_semaphore:
+            await edit_status(status_message, f"{note}⬇️ Starting download...")
+            progress = ProgressTracker(context.bot, status_message.chat_id, status_message.message_id)
+            result = await download_media(
+                request["url"], unique_id, resolution, audio_only, cookie_path, progress.hook
+            )
+        await edit_status(status_message, "📤 Uploading...")
+        await send_result(chat_id, result, audio_only)
+        try:
+            await status_message.delete()
+        except TelegramError:
+            pass
+        await record_outcome(
+            request["user_id"],
+            request["url"],
+            result.site,
+            resolution_label(audio_only, result.resolution),
+            result.size_mb,
+            result.duration,
+            True,
+            None,
+        )
+        await set_reaction(context, chat_id, source_message_id, "✅")
+    except DownloadError as error:
+        await report_failure(
+            context, chat_id, source_message_id, status_message, request["user_id"], request["url"], error, audio_only
+        )
+    except TimedOut:
+        await edit_status(status_message, "❌ Upload timed out.")
+        await set_reaction(context, chat_id, source_message_id, "❌")
+    except TelegramError as error:
+        logger.error("Telegram send failed: %s", error)
+        await edit_status(status_message, "❌ Telegram upload failed.")
+        await set_reaction(context, chat_id, source_message_id, "❌")
+    except Exception:
+        logger.exception("Download failed for %s", request["url"])
+        await edit_status(status_message, "❌ Something went wrong.")
+        await set_reaction(context, chat_id, source_message_id, "❌")
+    finally:
+        await asyncio.to_thread(cleanup_by_id, unique_id)
