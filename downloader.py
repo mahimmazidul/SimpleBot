@@ -225,3 +225,14 @@ def run_download_sync(
     options = build_ydl_options(unique_id, format_string, cookie_path, progress_hook)
     with yt_dlp.YoutubeDL(options) as ydl:
         return ydl.extract_info(url, download=True)
+
+
+def find_downloaded_file(unique_id: str) -> str | None:
+    candidates = [
+        path
+        for path in glob.glob(os.path.join(config.TEMP_DIR, f"{unique_id}.*"))
+        if not path.endswith((".part", ".ytdl", ".temp"))
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=os.path.getsize)
