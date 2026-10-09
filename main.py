@@ -69,3 +69,13 @@ user_cooldowns: dict[int, float] = {}
 def ensure_directories() -> None:
     os.makedirs(TEMP_DIR, exist_ok=True)
     os.makedirs(COOKIES_DIR, exist_ok=True)
+
+
+def delete_file_quietly(path: str) -> None:
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        pass
+    except OSError as error:
+        logger.error("Could not delete %s: %s", path, error)
+    gc.collect()
