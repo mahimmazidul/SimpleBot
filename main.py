@@ -50,3 +50,9 @@ async def post_shutdown(application: Application) -> None:
 async def periodic_cleanup_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     await asyncio.to_thread(periodic_cleanup, 900)
     await asyncio.to_thread(cleanup_logs)
+
+
+async def storage_guard_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    within_limit = await asyncio.to_thread(enforce_storage_limit)
+    if not within_limit:
+        logger.warning("Temp storage remains above limit after cleanup.")
