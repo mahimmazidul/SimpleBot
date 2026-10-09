@@ -175,3 +175,9 @@ def get_detailed_stats() -> dict[str, Any]:
         "errors": [(row["error_type"], row["total"]) for row in errors],
         "top_users": [(row["user_id"], row["total_downloads"]) for row in top_users],
     }
+
+
+def get_all_user_ids() -> list[int]:
+    with closing(open_connection()) as connection:
+        rows = connection.execute("SELECT user_id FROM users").fetchall()
+    return [row["user_id"] for row in rows]
