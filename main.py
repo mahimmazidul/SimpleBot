@@ -305,3 +305,12 @@ def describe_download_failure(error_text: str, cookie_path: str | None) -> str:
         return "🌍 Not available in this region."
     logger.error("Download failed: %s", error_text)
     return "❌ Download failed. Try again later."
+
+
+def is_netscape_cookie_file(path: str) -> bool:
+    try:
+        with open(path, "r", encoding="utf-8", errors="ignore") as cookie_file:
+            head = cookie_file.read(4096)
+    except OSError:
+        return False
+    return "Netscape HTTP Cookie File" in head or "HTTP Cookie File" in head
