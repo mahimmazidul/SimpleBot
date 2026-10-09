@@ -271,3 +271,14 @@ def download_media(url: str, unique_id: str, format_selector: str, cookie_path: 
     options = build_download_options(unique_id, format_selector, cookie_path)
     with yt_dlp.YoutubeDL(options) as ydl:
         return ydl.extract_info(url, download=True)
+
+
+def find_downloaded_file(unique_id: str) -> str | None:
+    candidates = [
+        path
+        for path in glob.glob(os.path.join(TEMP_DIR, f"{unique_id}.*"))
+        if not path.endswith((".part", ".ytdl", ".temp"))
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=os.path.getsize)
