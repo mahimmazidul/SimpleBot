@@ -282,3 +282,10 @@ def find_downloaded_file(unique_id: str) -> str | None:
     if not candidates:
         return None
     return max(candidates, key=os.path.getsize)
+
+
+def mark_cookie_stale(cookie_path: str) -> None:
+    try:
+        os.replace(cookie_path, cookie_path + ".stale")
+    except OSError as error:
+        logger.error("Could not mark cookie file stale: %s", error)
