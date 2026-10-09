@@ -129,3 +129,7 @@ def check_user_cooldown(user_id: int) -> float:
         return USER_COOLDOWN_SECONDS - (now - last_seen)
     user_cooldowns[user_id] = now
     return 0.0
+
+
+def is_admin(user_id: int) -> bool:
+    return user_id in ADMIN_IDS
