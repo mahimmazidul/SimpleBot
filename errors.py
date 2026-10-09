@@ -1,0 +1,12 @@
+import re
+
+from config import MAX_DURATION_SEC
+
+
+class DownloadError(Exception):
+    user_message = "❌ Download failed. Try again later."
+
+    def __init__(self, detail: str = "") -> None:
+        super().__init__(detail)
+        self.detail = detail
+        self.user_message = type(self).user_message
