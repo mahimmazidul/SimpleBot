@@ -55,3 +55,7 @@ class DurationExceededError(DownloadError):
 
 class FormatUnavailableError(DownloadError):
     user_message = "❌ The requested quality is not available for this video."
+
+
+class MergeFailedError(DownloadError):
+    user_message = "❌ Could not merge the video and audio streams."
