@@ -157,3 +157,27 @@ def resolution_label(audio_only: bool, resolution: int | None) -> str | None:
     if audio_only:
         return "Audio"
     return f"{resolution}p" if resolution else None
+
+
+async def report_failure(
+    context: ContextTypes.DEFAULT_TYPE,
+    chat_id: int,
+    source_message_id: int,
+    status_message: Message,
+    user_id: int,
+    url: str,
+    error: DownloadError,
+    audio_only: bool,
+) -> None:
+    await edit_status(status_message, error.user_message)
+    await set_reaction(context, chat_id, source_message_id, "❌")
+    await record_outcome(
+        user_id,
+        url,
+        extract_site_name(url),
+        resolution_label(audio_only, None),
+        None,
+        None,
+        False,
+        type(error).__name__,
+    )
