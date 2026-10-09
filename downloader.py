@@ -261,3 +261,30 @@ async def build_download_result(
         resolution=int(height) if height else resolution,
         size_mb=size_mb,
     )
+
+
+async def download_media(
+    url: str,
+    unique_id: str,
+    resolution: int | None,
+    audio_only: bool,
+    cookie_path: str | None,
+    progress_hook: Callable[[dict[str, Any]], None],
+) -> DownloadResult:
+    attempts = [build_format_string(resolution, audio_only)]
+    if not audio_only and config.FFMPEG_AVAILABLE:
+        attempts.extend(["best[ext=mp4]/best", "best"])
+    last_merge_error: DownloadError | None = None
+    for format_string in attempts:
+        try:
+            downloaded_info = await asyncio.to_thread(
+                run_download_sync, url, unique_id, format_string, cookie_path, progress_hook
+            )
+        except yt_dlp.utils.YoutubeDLError as error:
+            translated = await asyncio.to_thread(translate_ytdlp_error, error, cookie_path)
+            if isinstance(translated, MergeFailedError):
+                last_merge_error = translated
+                continue
+            raise translated from error
+        return await build_download_result(url, unique_id, resolution, downloaded_info)
+    raise last_merge_error or MergeFailedError()
