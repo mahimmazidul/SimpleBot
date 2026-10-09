@@ -229,3 +229,14 @@ def build_keyboard(token: str, tiers: list[dict[str, Any]]) -> InlineKeyboardMar
         )
     rows = [buttons[start : start + 2] for start in range(0, len(buttons), 2)]
     return InlineKeyboardMarkup(rows)
+
+
+def find_cookie_file(url: str) -> str | None:
+    hostname = (urlparse(url).hostname or "").lower()
+    for label in hostname.split("."):
+        if not label or label in ("www", "m"):
+            continue
+        candidate_path = os.path.join(COOKIES_DIR, f"{label}.txt")
+        if os.path.isfile(candidate_path):
+            return candidate_path
+    return None
