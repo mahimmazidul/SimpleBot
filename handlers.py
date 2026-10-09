@@ -40,3 +40,18 @@ from utils import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+COOKIE_UPLOAD_LIMIT_BYTES = 1024 * 1024
+MAX_STORED_REQUESTS = 20
+START_TEMPLATE = (
+    "🎬 Send me a video link from any site.\n\n"
+    "I'll auto-pick the best quality that fits.\n\n"
+    "Commands:\n"
+    "/audio <url> — audio only\n"
+    "/quality <url> — pick quality manually\n"
+    "/status — bot status\n"
+    "/help — this message\n\n"
+    "{local_api_status_line}\n"
+    "{today_stats_line}"
+)
