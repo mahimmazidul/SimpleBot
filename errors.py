@@ -75,3 +75,19 @@ class ExtractorBrokenError(DownloadError):
 
 class UnknownDownloadError(DownloadError):
     user_message = "❌ Download failed. Try again later."
+
+
+ERROR_PATTERNS: tuple[tuple[str, type[DownloadError]], ...] = (
+    (r"larger than max-filesize|max-filesize", FileTooLargeError),
+    (r"requested format is not available|format not available|no video formats", FormatUnavailableError),
+    (r"merging|ffmpeg", MergeFailedError),
+    (r"\blive event\b|\bis live\b|\bpremiere", LiveStreamError),
+    (r"\bdrm\b|encrypted|widevine", DRMProtectedError),
+    (r"log ?in|sign in|\bprivate\b|age[- ]restricted|\bage\b", LoginRequiredError),
+    (r"\bgeo|region|country|not available in your", GeoBlockedError),
+    (r"\b404\b|not found|removed|\bdeleted\b", NotFoundError),
+    (r"\b429\b|too many requests|throttl", RateLimitedError),
+    (r"timed out|timeout", NetworkTimeoutError),
+    (r"extractor error|bug report|report this issue", ExtractorBrokenError),
+    (r"unsupported url|unsupported|no suitable extractor", UnsupportedSiteError),
+)
