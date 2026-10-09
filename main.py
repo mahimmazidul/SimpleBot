@@ -101,3 +101,12 @@ def temp_usage_megabytes() -> float:
 
 def file_size_megabytes(file_path: str) -> float:
     return os.path.getsize(file_path) / MEGABYTE
+
+
+def cleanup_stale_temp_files(max_age_seconds: int) -> int:
+    cutoff = time.time() - max_age_seconds
+    with os.scandir(TEMP_DIR) as entries:
+        stale_paths = [entry.path for entry in entries if entry.is_file() and entry.stat().st_mtime < cutoff]
+    for stale_path in stale_paths:
+        delete_file_quietly(stale_path)
+    return len(stale_paths)
