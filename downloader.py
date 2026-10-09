@@ -139,3 +139,29 @@ def estimate_bytes(stream: dict[str, Any] | None, duration: float | None) -> flo
     if bitrate_kbps and duration:
         return bitrate_kbps * 125 * duration
     return 0.0
+
+
+def estimate_quality_sizes(info: dict[str, Any]) -> dict[int, float]:
+    formats = [item for item in info.get("formats") or [] if not item.get("has_drm")]
+    duration = info.get("duration")
+    videos = [item for item in formats if item.get("vcodec") not in (None, "none") and item.get("height")]
+    audios = [
+        item
+        for item in formats
+        if item.get("acodec") not in (None, "none") and item.get("vcodec") in (None, "none")
+    ]
+    best_audio = max(audios, key=lambda item: item.get("abr") or item.get("tbr") or 0, default=None)
+    audio_mb = estimate_bytes(best_audio, duration) / config.MEGABYTE
+    sizes: dict[int, float] = {}
+    for height in sorted({item["height"] for item in videos}):
+        video = max(
+            (item for item in videos if item["height"] == height),
+            key=lambda item: item.get("tbr") or 0,
+        )
+        video_mb = estimate_bytes(video, duration) / config.MEGABYTE
+        if video.get("acodec") in (None, "none"):
+            video_mb += audio_mb
+        sizes[height] = video_mb
+    if best_audio is not None:
+        sizes[0] = audio_mb
+    return sizes
