@@ -151,3 +151,9 @@ def build_quality_keyboard(unique_id: str, sizes: dict[int, float]) -> InlineKey
         buttons.append(make_quality_button("Audio", sizes[0], limit_mb, f"quality:{unique_id}:audio"))
     rows = [buttons[start : start + 2] for start in range(0, len(buttons), 2)]
     return InlineKeyboardMarkup(rows)
+
+
+def resolution_label(audio_only: bool, resolution: int | None) -> str | None:
+    if audio_only:
+        return "Audio"
+    return f"{resolution}p" if resolution else None
