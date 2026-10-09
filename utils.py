@@ -114,3 +114,7 @@ def is_memory_pressure() -> bool:
     except (OSError, ValueError, IndexError):
         return False
     return False
+
+
+def file_size_megabytes(file_path: str) -> float:
+    return os.path.getsize(file_path) / config.MEGABYTE
