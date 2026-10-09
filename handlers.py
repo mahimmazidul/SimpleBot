@@ -398,3 +398,45 @@ async def quality_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if await is_cooling_down(message, user.id):
         return
     await process_url(update, context, url, "manual")
+
+
+async def handle_quality_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if query is None or query.data is None or not isinstance(query.message, Message):
+        return
+    parts = query.data.split(":")
+    pending = context.user_data.get("pending", {}) if context.user_data else {}
+    request = pending.get(parts[1]) if len(parts) == 3 else None
+    if request is None:
+        await query.answer("This request expired. Send the link again.", show_alert=True)
+        return
+    choice = parts[2]
+    audio_only = choice == "audio"
+    if audio_only:
+        size_key = 0
+    elif choice.isdigit():
+        size_key = int(choice)
+    else:
+        await query.answer("Invalid quality.", show_alert=True)
+        return
+    resolution = None if audio_only else size_key
+    size_mb = request["sizes"].get(size_key, 0.0)
+    limit_mb = api_manager.get_effective_max_mb()
+    if size_mb > limit_mb:
+        await query.answer(
+            f"🔒 This quality is {size_mb:.0f} MB. Max allowed is {limit_mb} MB. "
+            "Set up the Local Bot API Server to unlock.",
+            show_alert=True,
+        )
+        return
+    pending.pop(parts[1], None)
+    await query.answer()
+    await run_pipeline(
+        context,
+        request["chat_id"],
+        request["source_message_id"],
+        query.message,
+        request,
+        resolution,
+        audio_only,
+    )
