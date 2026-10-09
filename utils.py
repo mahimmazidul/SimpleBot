@@ -7,6 +7,8 @@ from urllib.parse import urlparse
 import yt_dlp
 
 import config
+import messages as msg
+from messages import render
 
 URL_PATTERN = re.compile(r"https?://[^\s<>\"']+")
 TRAILING_PUNCTUATION = ".,;:!?)]}"
@@ -85,15 +87,15 @@ def format_caption(
     duration: int | None,
     file_size_mb: float,
 ) -> str:
-    lines = [f"🎬 {title}"]
+    lines = [msg.CAPTION_TITLE.format(title=title)]
     if site:
-        lines.append(f"🌐 {site}")
+        lines.append(msg.CAPTION_SITE.format(site=site))
     if resolution:
-        lines.append(f"📺 {resolution}")
+        lines.append(msg.CAPTION_RESOLUTION.format(resolution=resolution))
     if duration:
-        lines.append(f"⏱ {human_duration(duration)}")
-    lines.append(f"📦 {file_size_mb:.1f} MB")
-    return "\n".join(lines)[:1024]
+        lines.append(msg.CAPTION_DURATION.format(duration=human_duration(duration)))
+    lines.append(msg.CAPTION_SIZE.format(size_mb=file_size_mb))
+    return render("\n".join(lines))[:1024]
 
 
 def yt_dlp_age_days() -> int:
