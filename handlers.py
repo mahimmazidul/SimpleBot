@@ -181,3 +181,43 @@ async def report_failure(
         False,
         type(error).__name__,
     )
+
+
+async def send_result(chat_id: int, result: DownloadResult, audio_only: bool) -> None:
+    sender = api_manager.get_sender(result.size_mb)
+    if sender is None:
+        raise FileTooLargeError(size_mb=result.size_mb, limit_mb=api_manager.get_effective_max_mb())
+    caption = format_caption(
+        result.title,
+        result.site,
+        resolution_label(audio_only, result.resolution),
+        result.duration,
+        result.size_mb,
+    )
+    for attempt in range(2):
+        try:
+            with open(result.file_path, "rb") as media_file:
+                if audio_only:
+                    await sender.send_audio(
+                        chat_id=chat_id,
+                        audio=media_file,
+                        title=result.title[:64],
+                        duration=result.duration or None,
+                        caption=caption,
+                        read_timeout=300,
+                        write_timeout=300,
+                    )
+                else:
+                    await sender.send_video(
+                        chat_id=chat_id,
+                        video=media_file,
+                        caption=caption,
+                        duration=result.duration or None,
+                        supports_streaming=True,
+                        read_timeout=300,
+                        write_timeout=300,
+                    )
+            return
+        except TimedOut:
+            if attempt == 1:
+                raise
