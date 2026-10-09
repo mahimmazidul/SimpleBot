@@ -59,3 +59,7 @@ class FormatUnavailableError(DownloadError):
 
 class MergeFailedError(DownloadError):
     user_message = "❌ Could not merge the video and audio streams."
+
+
+class NetworkTimeoutError(DownloadError):
+    user_message = "⏱ The site timed out. Try again later."
