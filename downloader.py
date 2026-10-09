@@ -82,3 +82,8 @@ def is_netscape_cookie_file(path: str) -> bool:
     except OSError:
         return False
     return "Netscape HTTP Cookie File" in head or "HTTP Cookie File" in head
+
+
+def list_cookie_sites() -> list[str]:
+    with os.scandir(config.COOKIES_DIR) as entries:
+        return sorted(entry.name[:-4] for entry in entries if entry.is_file() and entry.name.endswith(".txt"))
