@@ -102,3 +102,11 @@ def local_status_line() -> str:
     if api_manager.local_api_available:
         return f"✅ Large file support active (up to {api_manager.get_effective_max_mb()} MB)"
     return "⚠️ Large files unavailable. Max 50 MB. Ask admin to set up Local API."
+
+
+async def build_start_text() -> str:
+    stats = await asyncio.to_thread(get_global_stats)
+    return START_TEMPLATE.format(
+        local_api_status_line=local_status_line(),
+        today_stats_line=f"📈 Today: {stats['today_downloads']} downloads",
+    )
