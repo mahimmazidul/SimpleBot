@@ -347,3 +347,42 @@ async def post_shutdown(application: Application) -> None:
         await local_bot.shutdown()
     await asyncio.to_thread(wipe_temp_directory)
     logger.info("Bot shut down cleanly.")
+
+
+async def send_media_file(
+    context: ContextTypes.DEFAULT_TYPE,
+    chat_id: int,
+    file_path: str,
+    title: str,
+    duration: int | None,
+    is_audio: bool,
+) -> None:
+    file_size_mb = await asyncio.to_thread(file_size_megabytes, file_path)
+    use_local = file_size_mb > PUBLIC_API_LIMIT_MB and local_bot is not None
+    sender = local_bot if use_local and local_bot is not None else context.bot
+    for attempt in range(2):
+        try:
+            with open(file_path, "rb") as media_file:
+                if is_audio:
+                    await sender.send_audio(
+                        chat_id=chat_id,
+                        audio=media_file,
+                        title=title[:64],
+                        duration=duration,
+                        read_timeout=300,
+                        write_timeout=300,
+                    )
+                else:
+                    await sender.send_video(
+                        chat_id=chat_id,
+                        video=media_file,
+                        caption=f"🎬 {title}"[:1024],
+                        duration=duration,
+                        supports_streaming=True,
+                        read_timeout=300,
+                        write_timeout=300,
+                    )
+            return
+        except TimedOut:
+            if attempt == 1:
+                raise
