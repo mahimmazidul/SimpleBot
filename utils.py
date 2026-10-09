@@ -67,3 +67,8 @@ def sanitize_filename(name: str, max_len: int = 100) -> str:
 
 def random_ua() -> str:
     return random.choice(MOBILE_UA_POOL)
+
+
+def extract_site_name(url: str) -> str:
+    hostname = (urlparse(url).hostname or "unknown").lower()
+    return hostname[4:] if hostname.startswith("www.") else hostname
