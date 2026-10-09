@@ -63,3 +63,7 @@ class MergeFailedError(DownloadError):
 
 class NetworkTimeoutError(DownloadError):
     user_message = "⏱ The site timed out. Try again later."
+
+
+class RateLimitedError(DownloadError):
+    user_message = "🚦 The site is rate-limiting requests. Try again in a few minutes."
