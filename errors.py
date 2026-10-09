@@ -51,3 +51,7 @@ class FileTooLargeError(DownloadError):
 
 class DurationExceededError(DownloadError):
     user_message = f"❌ Video exceeds {MAX_DURATION_SEC // 60} minute limit."
+
+
+class FormatUnavailableError(DownloadError):
+    user_message = "❌ The requested quality is not available for this video."
