@@ -416,3 +416,8 @@ HELP_TEXT = (
     "Commands: /start, /help, /status\n"
     "Admins: /cookies <site> (reply to a .txt cookie file)"
 )
+
+
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if update.effective_message is not None:
+        await update.effective_message.reply_text(START_TEXT)
