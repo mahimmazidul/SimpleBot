@@ -110,3 +110,10 @@ async def build_start_text() -> str:
         local_api_status_line=local_status_line(),
         today_stats_line=f"📈 Today: {stats['today_downloads']} downloads",
     )
+
+
+async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    if message is None:
+        return
+    await message.reply_text(await build_start_text())
