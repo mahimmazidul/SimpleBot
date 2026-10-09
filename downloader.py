@@ -73,3 +73,12 @@ def mark_cookie_stale(cookie_path: str) -> None:
         os.replace(cookie_path, cookie_path + ".stale")
     except OSError as error:
         logger.error("Could not mark cookie file stale: %s", error)
+
+
+def is_netscape_cookie_file(path: str) -> bool:
+    try:
+        with open(path, "r", encoding="utf-8", errors="ignore") as cookie_file:
+            head = cookie_file.read(4096)
+    except OSError:
+        return False
+    return "Netscape HTTP Cookie File" in head or "HTTP Cookie File" in head
