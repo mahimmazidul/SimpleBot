@@ -289,3 +289,19 @@ def mark_cookie_stale(cookie_path: str) -> None:
         os.replace(cookie_path, cookie_path + ".stale")
     except OSError as error:
         logger.error("Could not mark cookie file stale: %s", error)
+
+
+def describe_download_failure(error_text: str, cookie_path: str | None) -> str:
+    lowered = error_text.lower()
+    if any(term in lowered for term in SIZE_TERMS):
+        return "❌ File exceeds the size limit. Pick a lower quality."
+    if any(term in lowered for term in LOGIN_TERMS):
+        if cookie_path is not None:
+            mark_cookie_stale(cookie_path)
+            logger.error("Cookies rejected and marked stale: %s", cookie_path)
+            return "🔒 Saved cookies were rejected and have been disabled. Admin needs to upload fresh cookies."
+        return "🔒 Private or login-required content. Admin needs to upload cookies for this site."
+    if any(term in lowered for term in GEO_TERMS):
+        return "🌍 Not available in this region."
+    logger.error("Download failed: %s", error_text)
+    return "❌ Download failed. Try again later."
