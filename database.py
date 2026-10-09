@@ -111,3 +111,9 @@ def get_user_stats(user_id: int) -> dict[str, Any]:
         "total_gb": totals["total_mb"] / 1024,
         "favorite_site": favorite["site"] if favorite else None,
     }
+
+
+def utc_start_of_today() -> str:
+    local_now = datetime.now(ZoneInfo(config.DISPLAY_TIMEZONE))
+    local_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    return local_start.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
