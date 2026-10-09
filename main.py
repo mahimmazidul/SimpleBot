@@ -110,3 +110,9 @@ def cleanup_stale_temp_files(max_age_seconds: int) -> int:
     for stale_path in stale_paths:
         delete_file_quietly(stale_path)
     return len(stale_paths)
+
+
+async def periodic_cleanup_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    removed_count = await asyncio.to_thread(cleanup_stale_temp_files, ORPHAN_AGE_SECONDS)
+    if removed_count:
+        logger.info("Removed %d stale temp files.", removed_count)
