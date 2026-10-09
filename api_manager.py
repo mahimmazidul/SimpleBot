@@ -46,3 +46,17 @@ class ApiManager:
     async def create_local_bot(self) -> None:
         self.local_bot = Bot(token=self.token, base_url=f"{self.local_url}/bot")
         await self.local_bot.initialize()
+
+    async def health_check(self) -> None:
+        was_available = self.local_api_available
+        self.local_api_available = await self.probe_local_api()
+        if was_available and not self.local_api_available:
+            logger.warning("Local API went down. Large files are unavailable until it recovers.")
+        elif not was_available and self.local_api_available:
+            try:
+                await self.create_local_bot()
+            except TelegramError as error:
+                self.local_api_available = False
+                logger.error("Could not initialize local Bot API client: %s", error)
+                return
+            logger.warning("Local API is back. Large file support re-enabled.")
