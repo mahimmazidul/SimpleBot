@@ -39,3 +39,19 @@ class DownloadResult:
     site: str
     resolution: int | None
     size_mb: float
+
+
+def build_format_string(resolution: int | None = None, audio_only: bool = False) -> str:
+    if audio_only:
+        return AUDIO_FORMAT
+    if not config.FFMPEG_AVAILABLE:
+        if resolution is None:
+            return "best[ext=mp4]/best"
+        return f"best[height<={resolution}][ext=mp4]/best[height<={resolution}]"
+    if resolution is None:
+        return "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best"
+    return (
+        f"bestvideo[height<={resolution}][ext=mp4]+bestaudio[ext=m4a]/"
+        f"best[height<={resolution}][ext=mp4]/"
+        f"best[height<={resolution}]"
+    )
