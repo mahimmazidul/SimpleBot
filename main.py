@@ -667,3 +667,7 @@ def main() -> None:
         allowed_updates=Update.ALL_TYPES,
         stop_signals=(signal.SIGINT, signal.SIGTERM),
     )
+
+
+if __name__ == "__main__":
+    main()
