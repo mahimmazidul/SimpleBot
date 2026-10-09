@@ -618,3 +618,12 @@ async def handle_quality_callback(update: Update, context: ContextTypes.DEFAULT_
         await edit_status(query.message, "⏳ Queued. Another download is in progress...")
     async with download_semaphore:
         await deliver_quality(context, query.message, request, tier)
+
+
+async def global_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    logger.error("Unhandled exception", exc_info=context.error)
+    if isinstance(update, Update) and update.effective_message is not None:
+        try:
+            await update.effective_message.reply_text("❌ Something went wrong.")
+        except TelegramError:
+            pass
