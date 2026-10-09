@@ -470,3 +470,21 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         "🎞 ffmpeg: available" if config.FFMPEG_AVAILABLE else "⚠️ ffmpeg missing: merged formats only",
     ]
     await message.reply_text("\n".join(lines))
+
+
+async def cookies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    user = update.effective_user
+    if message is None or user is None or not is_admin(user.id):
+        return
+    if not context.args:
+        sites = await asyncio.to_thread(list_cookie_sites)
+        listing = ", ".join(sites) if sites else "none"
+        await message.reply_text(f"🍪 Saved cookie sites: {listing}\nUsage: /cookies <site>")
+        return
+    site = re.sub(r"[^a-z0-9_-]", "", context.args[0].lower())
+    if not site:
+        await message.reply_text("❌ Invalid site name.")
+        return
+    context.user_data["cookie_site"] = site
+    await message.reply_text(f"📎 Send the cookies .txt file for {site} now.")
