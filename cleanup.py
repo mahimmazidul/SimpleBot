@@ -17,3 +17,8 @@ def delete_file_safe(path: str) -> None:
     except OSError as error:
         logger.error("Could not delete %s: %s", path, error)
     gc.collect()
+
+
+def cleanup_by_id(unique_id: str) -> None:
+    for path in glob.glob(os.path.join(config.TEMP_DIR, f"{unique_id}*")):
+        delete_file_safe(path)
