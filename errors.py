@@ -67,3 +67,7 @@ class NetworkTimeoutError(DownloadError):
 
 class RateLimitedError(DownloadError):
     user_message = "🚦 The site is rate-limiting requests. Try again in a few minutes."
+
+
+class ExtractorBrokenError(DownloadError):
+    user_message = "⚠️ This site's extractor is broken right now. Try again after an update."
