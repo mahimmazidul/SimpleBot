@@ -103,3 +103,10 @@ def extract_metadata(url: str, cookie_path: str | None) -> dict[str, Any]:
         options["cookiefile"] = cookie_path
     with yt_dlp.YoutubeDL(options) as ydl:
         return ydl.extract_info(url, download=False)
+
+
+def translate_ytdlp_error(error: Exception, cookie_path: str | None) -> DownloadError:
+    translated = classify_ytdlp_error(str(error))
+    if isinstance(translated, LoginRequiredError) and cookie_path is not None:
+        mark_cookie_stale(cookie_path)
+    return translated
