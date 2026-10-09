@@ -87,3 +87,19 @@ def is_netscape_cookie_file(path: str) -> bool:
 def list_cookie_sites() -> list[str]:
     with os.scandir(config.COOKIES_DIR) as entries:
         return sorted(entry.name[:-4] for entry in entries if entry.is_file() and entry.name.endswith(".txt"))
+
+
+def extract_metadata(url: str, cookie_path: str | None) -> dict[str, Any]:
+    options: dict[str, Any] = {
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "skip_download": True,
+        "socket_timeout": 30,
+        "extractor_retries": 2,
+        "http_headers": {"User-Agent": random_ua()},
+    }
+    if cookie_path:
+        options["cookiefile"] = cookie_path
+    with yt_dlp.YoutubeDL(options) as ydl:
+        return ydl.extract_info(url, download=False)
