@@ -116,3 +116,7 @@ async def periodic_cleanup_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     removed_count = await asyncio.to_thread(cleanup_stale_temp_files, ORPHAN_AGE_SECONDS)
     if removed_count:
         logger.info("Removed %d stale temp files.", removed_count)
+
+
+def extract_urls(text: str) -> list[str]:
+    return [match.rstrip(TRAILING_PUNCTUATION) for match in URL_PATTERN.findall(text)]
