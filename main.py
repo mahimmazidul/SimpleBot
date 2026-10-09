@@ -64,3 +64,8 @@ download_semaphore = asyncio.Semaphore(1)
 local_api_available = False
 local_bot: Bot | None = None
 user_cooldowns: dict[int, float] = {}
+
+
+def ensure_directories() -> None:
+    os.makedirs(TEMP_DIR, exist_ok=True)
+    os.makedirs(COOKIES_DIR, exist_ok=True)
