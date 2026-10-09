@@ -76,3 +76,10 @@ async def is_cooling_down(message: Message, user_id: int) -> bool:
         await message.reply_text(f"⏳ Wait {remaining:.0f}s before the next request.")
         return True
     return False
+
+
+async def set_reaction(context: ContextTypes.DEFAULT_TYPE, chat_id: int, message_id: int, emoji: str) -> None:
+    try:
+        await context.bot.set_message_reaction(chat_id=chat_id, message_id=message_id, reaction=emoji)
+    except TelegramError:
+        pass
