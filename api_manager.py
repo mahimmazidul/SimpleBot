@@ -30,3 +30,15 @@ class ApiManager:
             logger.info("Local API detected. Large file support enabled.")
         elif local_url:
             logger.warning("Local API not found at %s. Files over 50 MB will be rejected.", local_url)
+
+    async def probe_local_api(self) -> bool:
+        if not self.local_url or self.http_client is None:
+            return False
+        try:
+            response = await self.http_client.get(
+                f"{self.local_url}/bot{self.token}/getMe",
+                timeout=config.PROBE_TIMEOUT_SEC,
+            )
+        except httpx.HTTPError:
+            return False
+        return response.status_code == 200
