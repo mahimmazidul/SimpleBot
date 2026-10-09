@@ -39,3 +39,9 @@ async def post_init(application: Application) -> None:
     if not config.FFMPEG_AVAILABLE:
         logger.warning("ffmpeg not found. Using pre-merged formats only.")
     logger.info("Bot started.")
+
+
+async def post_shutdown(application: Application) -> None:
+    await asyncio.to_thread(periodic_cleanup, 0)
+    await api_manager.close()
+    logger.info("Bot shut down cleanly.")
