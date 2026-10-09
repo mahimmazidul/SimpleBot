@@ -34,3 +34,16 @@ class LiveStreamError(DownloadError):
 
 class DRMProtectedError(DownloadError):
     user_message = "🔐 This video is DRM-protected and cannot be downloaded."
+
+
+class FileTooLargeError(DownloadError):
+    user_message = "❌ File is too large for the current limit. Pick a lower quality."
+
+    def __init__(self, detail: str = "", size_mb: float = 0.0, limit_mb: int = 0) -> None:
+        super().__init__(detail)
+        self.size_mb = size_mb
+        self.limit_mb = limit_mb
+        if size_mb and limit_mb:
+            self.user_message = (
+                f"❌ File is {size_mb:.0f} MB, over the {limit_mb} MB limit. Pick a lower quality."
+            )
