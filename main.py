@@ -54,3 +54,8 @@ TRAILING_PUNCTUATION = ".,;:!?)]}"
 LOGIN_TERMS = ("login", "sign in", "private", "cookies", "age-restricted", "age restricted")
 GEO_TERMS = ("geo", "your country", "your region")
 SIZE_TERMS = ("max-filesize", "larger than max")
+
+logging.basicConfig(level=LOG_LEVEL, format="[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s")
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("yt_dlp").setLevel(logging.ERROR)
+logger = logging.getLogger("videobot")
