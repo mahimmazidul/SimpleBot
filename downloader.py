@@ -117,3 +117,13 @@ async def fetch_metadata(url: str, cookie_path: str | None) -> dict[str, Any]:
         return await asyncio.to_thread(extract_metadata, url, cookie_path)
     except yt_dlp.utils.YoutubeDLError as error:
         raise (await asyncio.to_thread(translate_ytdlp_error, error, cookie_path)) from error
+
+
+def check_metadata(info: dict[str, Any]) -> None:
+    if info.get("is_live") or info.get("live_status") in ("is_live", "is_upcoming", "post_live"):
+        raise LiveStreamError()
+    formats = info.get("formats") or []
+    if formats and all(item.get("has_drm") for item in formats):
+        raise DRMProtectedError()
+    if (info.get("duration") or 0) > config.MAX_DURATION_SEC:
+        raise DurationExceededError()
