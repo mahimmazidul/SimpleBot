@@ -55,3 +55,14 @@ def build_format_string(resolution: int | None = None, audio_only: bool = False)
         f"best[height<={resolution}][ext=mp4]/"
         f"best[height<={resolution}]"
     )
+
+
+def find_cookie_file(url: str) -> str | None:
+    hostname = (urlparse(url).hostname or "").lower()
+    for label in hostname.split("."):
+        if not label or label in ("www", "m"):
+            continue
+        candidate_path = os.path.join(config.COOKIES_DIR, f"{label}.txt")
+        if os.path.isfile(candidate_path):
+            return candidate_path
+    return None
