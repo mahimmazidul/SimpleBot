@@ -72,3 +72,14 @@ class ApiManager:
         if self.local_api_available and self.local_bot is not None:
             return self.local_bot
         return None
+
+    async def close(self) -> None:
+        if self.http_client is not None:
+            await self.http_client.aclose()
+        for bot in (self.local_bot, self.public_bot):
+            if bot is None:
+                continue
+            try:
+                await bot.shutdown()
+            except Exception:
+                logger.exception("Bot shutdown failed")
