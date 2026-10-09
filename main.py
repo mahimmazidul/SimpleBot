@@ -79,3 +79,7 @@ def main() -> None:
     if config.LOCAL_API_URL:
         application.job_queue.run_repeating(api_health_check_job, interval=300, first=120)
     application.run_polling(drop_pending_updates=True, allowed_updates=["message", "callback_query"])
+
+
+if __name__ == "__main__":
+    main()
