@@ -216,3 +216,16 @@ def build_quality_tiers(info: dict[str, Any]) -> list[dict[str, Any]]:
             }
         )
     return tiers
+
+
+def build_keyboard(token: str, tiers: list[dict[str, Any]]) -> InlineKeyboardMarkup:
+    limit_mb = effective_max_megabytes()
+    buttons: list[InlineKeyboardButton] = []
+    for index, tier in enumerate(tiers):
+        size_text = f" ~{tier['size_mb']:.0f}MB" if tier["size_mb"] > 0 else ""
+        lock_text = " 🔒" if tier["size_mb"] > limit_mb else ""
+        buttons.append(
+            InlineKeyboardButton(f"{tier['title']}{size_text}{lock_text}", callback_data=f"dl|{token}|{index}")
+        )
+    rows = [buttons[start : start + 2] for start in range(0, len(buttons), 2)]
+    return InlineKeyboardMarkup(rows)
