@@ -117,3 +117,27 @@ def utc_start_of_today() -> str:
     local_now = datetime.now(ZoneInfo(config.DISPLAY_TIMEZONE))
     local_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
     return local_start.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def get_global_stats() -> dict[str, Any]:
+    cutoff = utc_start_of_today()
+    with closing(open_connection()) as connection:
+        totals = connection.execute(
+            "SELECT COUNT(*) AS total, COALESCE(SUM(file_size_mb), 0) AS total_mb FROM downloads WHERE success = 1"
+        ).fetchone()
+        users = connection.execute("SELECT COUNT(*) AS total FROM users").fetchone()
+        today = connection.execute(
+            "SELECT COUNT(*) AS total FROM downloads WHERE success = 1 AND created_at >= ?",
+            (cutoff,),
+        ).fetchone()
+        top_sites = connection.execute(
+            "SELECT site, COUNT(*) AS total FROM downloads WHERE success = 1 AND site IS NOT NULL "
+            "GROUP BY site ORDER BY total DESC LIMIT 5"
+        ).fetchall()
+    return {
+        "total_downloads": totals["total"],
+        "total_gb": totals["total_mb"] / 1024,
+        "total_users": users["total"],
+        "today_downloads": today["total"],
+        "top_sites": [(row["site"], row["total"]) for row in top_sites],
+    }
