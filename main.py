@@ -45,3 +45,8 @@ async def post_shutdown(application: Application) -> None:
     await asyncio.to_thread(periodic_cleanup, 0)
     await api_manager.close()
     logger.info("Bot shut down cleanly.")
+
+
+async def periodic_cleanup_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    await asyncio.to_thread(periodic_cleanup, 900)
+    await asyncio.to_thread(cleanup_logs)
