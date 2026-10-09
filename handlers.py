@@ -488,3 +488,27 @@ async def cookies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
     context.user_data["cookie_site"] = site
     await message.reply_text(f"📎 Send the cookies .txt file for {site} now.")
+
+
+async def cookie_document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    user = update.effective_user
+    if message is None or user is None or message.document is None or not is_admin(user.id):
+        return
+    site = context.user_data.pop("cookie_site", None) if context.user_data else None
+    if site is None:
+        return
+    document = message.document
+    if document.file_size and document.file_size > COOKIE_UPLOAD_LIMIT_BYTES:
+        await message.reply_text("❌ Cookie file is too large.")
+        return
+    staging_path = os.path.join(config.COOKIES_DIR, f"{site}.upload")
+    target_path = os.path.join(config.COOKIES_DIR, f"{site}.txt")
+    telegram_file = await document.get_file()
+    await telegram_file.download_to_drive(staging_path)
+    if not await asyncio.to_thread(is_netscape_cookie_file, staging_path):
+        await asyncio.to_thread(delete_file_safe, staging_path)
+        await message.reply_text("❌ Not a Netscape cookie file. Export with 'Get cookies.txt LOCALLY'.")
+        return
+    await asyncio.to_thread(os.replace, staging_path, target_path)
+    await message.reply_text(f"✅ Saved cookies for {site}.")
