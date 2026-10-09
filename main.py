@@ -386,3 +386,16 @@ async def send_media_file(
         except TimedOut:
             if attempt == 1:
                 raise
+
+
+async def edit_status(
+    message: Message | None,
+    text: str,
+    reply_markup: InlineKeyboardMarkup | None = None,
+) -> None:
+    if not isinstance(message, Message):
+        return
+    try:
+        await message.edit_text(text[:4000], reply_markup=reply_markup)
+    except TelegramError as error:
+        logger.error("Status edit failed: %s", error)
