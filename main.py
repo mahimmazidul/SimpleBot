@@ -325,3 +325,18 @@ async def probe_local_api() -> bool:
     except httpx.HTTPError:
         return False
     return response.status_code == 200
+
+
+async def post_init(application: Application) -> None:
+    global local_api_available, local_bot
+    local_api_available = await probe_local_api()
+    if local_api_available:
+        local_bot = Bot(token=BOT_TOKEN, base_url=f"{LOCAL_API_URL}/bot")
+        await local_bot.initialize()
+        logger.info("Local API detected. Large file support enabled.")
+    else:
+        logger.info(
+            "Local API not found at %s. Files over 50 MB will be rejected. Set LOCAL_API_URL to enable large file support.",
+            LOCAL_API_URL or "(unset)",
+        )
+    logger.info("Bot started. yt-dlp %s. Max file size %d MB.", yt_dlp.version.__version__, effective_max_megabytes())
