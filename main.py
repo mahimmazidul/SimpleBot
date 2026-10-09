@@ -91,3 +91,9 @@ def wipe_temp_directory() -> None:
 def delete_downloads_for(unique_id: str) -> None:
     for path in glob.glob(os.path.join(TEMP_DIR, f"{unique_id}*")):
         delete_file_quietly(path)
+
+
+def temp_usage_megabytes() -> float:
+    with os.scandir(TEMP_DIR) as entries:
+        total_bytes = sum(entry.stat().st_size for entry in entries if entry.is_file())
+    return total_bytes / MEGABYTE
