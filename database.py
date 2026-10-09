@@ -92,3 +92,22 @@ def record_download(
                 "UPDATE users SET total_downloads = total_downloads + 1, last_active = CURRENT_TIMESTAMP WHERE user_id = ?",
                 (user_id,),
             )
+
+
+def get_user_stats(user_id: int) -> dict[str, Any]:
+    with closing(open_connection()) as connection:
+        totals = connection.execute(
+            "SELECT COUNT(*) AS total, COALESCE(SUM(file_size_mb), 0) AS total_mb "
+            "FROM downloads WHERE user_id = ? AND success = 1",
+            (user_id,),
+        ).fetchone()
+        favorite = connection.execute(
+            "SELECT site FROM downloads WHERE user_id = ? AND success = 1 AND site IS NOT NULL "
+            "GROUP BY site ORDER BY COUNT(*) DESC LIMIT 1",
+            (user_id,),
+        ).fetchone()
+    return {
+        "total_downloads": totals["total"],
+        "total_gb": totals["total_mb"] / 1024,
+        "favorite_site": favorite["site"] if favorite else None,
+    }
