@@ -151,3 +151,17 @@ def estimate_stream_bytes(stream: dict[str, Any] | None, duration: float | None)
     if bitrate_kbps and duration:
         return bitrate_kbps * 125 * duration
     return 0.0
+
+
+def fetch_video_information(url: str, cookie_path: str | None) -> dict[str, Any]:
+    options: dict[str, Any] = {
+        "quiet": True,
+        "no_warnings": True,
+        "noplaylist": True,
+        "skip_download": True,
+        "socket_timeout": 30,
+    }
+    if cookie_path:
+        options["cookiefile"] = cookie_path
+    with yt_dlp.YoutubeDL(options) as ydl:
+        return ydl.extract_info(url, download=False)
