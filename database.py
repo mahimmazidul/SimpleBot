@@ -42,3 +42,14 @@ def open_connection() -> sqlite3.Connection:
 def create_schema() -> None:
     with closing(open_connection()) as connection, connection:
         connection.executescript(SCHEMA)
+
+
+def init_db() -> None:
+    try:
+        create_schema()
+    except sqlite3.DatabaseError as error:
+        logger.error("Database unreadable (%s). Recreating it.", error)
+        for path in (config.DB_PATH, config.DB_PATH + "-wal", config.DB_PATH + "-shm", config.DB_PATH + "-journal"):
+            if os.path.exists(path):
+                os.remove(path)
+        create_schema()
