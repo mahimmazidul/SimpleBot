@@ -177,3 +177,39 @@ def select_auto_format(info: dict[str, Any]) -> tuple[int, bool]:
         if sizes[height] <= limit_mb:
             return height, True
     return heights[-1], False
+
+
+def build_ydl_options(
+    unique_id: str,
+    format_string: str,
+    cookie_path: str | None,
+    progress_hook: Callable[[dict[str, Any]], None],
+) -> dict[str, Any]:
+    options: dict[str, Any] = {
+        "outtmpl": os.path.join(config.TEMP_DIR, f"{unique_id}.%(ext)s"),
+        "format": format_string,
+        "merge_output_format": "mp4",
+        "noplaylist": True,
+        "max_filesize": api_manager.get_effective_max_mb() * config.MEGABYTE,
+        "socket_timeout": 30,
+        "retries": 3,
+        "fragment_retries": 5,
+        "retry_sleep_functions": {"http": lambda attempt: 2**attempt},
+        "concurrent_fragment_downloads": 1,
+        "buffersize": 1024,
+        "quiet": True,
+        "no_warnings": True,
+        "http_headers": {"User-Agent": random_ua()},
+        "progress_hooks": [progress_hook],
+        "nocheckcertificate": False,
+        "prefer_insecure": False,
+        "ignoreerrors": False,
+        "extractor_retries": 2,
+        "keepvideo": False,
+        "writethumbnail": False,
+        "writeinfojson": False,
+        "writesubtitles": False,
+    }
+    if cookie_path:
+        options["cookiefile"] = cookie_path
+    return options
