@@ -213,3 +213,15 @@ def build_ydl_options(
     if cookie_path:
         options["cookiefile"] = cookie_path
     return options
+
+
+def run_download_sync(
+    url: str,
+    unique_id: str,
+    format_string: str,
+    cookie_path: str | None,
+    progress_hook: Callable[[dict[str, Any]], None],
+) -> dict[str, Any]:
+    options = build_ydl_options(unique_id, format_string, cookie_path, progress_hook)
+    with yt_dlp.YoutubeDL(options) as ydl:
+        return ydl.extract_info(url, download=True)
