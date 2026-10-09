@@ -72,3 +72,7 @@ def random_ua() -> str:
 def extract_site_name(url: str) -> str:
     hostname = (urlparse(url).hostname or "unknown").lower()
     return hostname[4:] if hostname.startswith("www.") else hostname
+
+
+def is_admin(user_id: int) -> bool:
+    return user_id in config.ADMIN_IDS
