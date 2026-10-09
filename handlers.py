@@ -12,6 +12,7 @@ from telegram.error import TelegramError, TimedOut
 from telegram.ext import Application, CallbackQueryHandler, CommandHandler, ContextTypes, MessageHandler, filters
 
 import config
+import messages as msg
 from api_manager import api_manager
 from cleanup import cleanup_by_id, delete_file_safe, enforce_storage_limit, get_temp_usage_mb
 from database import get_all_user_ids, get_detailed_stats, get_global_stats, record_download, record_user
@@ -27,6 +28,7 @@ from downloader import (
     select_auto_format,
 )
 from errors import DownloadError, FileTooLargeError, FormatUnavailableError
+from messages import render
 from progress import ProgressTracker
 from utils import (
     extract_site_name,
@@ -41,22 +43,8 @@ from utils import (
 
 logger = logging.getLogger(__name__)
 
-
 COOKIE_UPLOAD_LIMIT_BYTES = 1024 * 1024
 MAX_STORED_REQUESTS = 20
-START_TEMPLATE = (
-    "🎬 Send me a video link from any site.\n\n"
-    "I'll auto-pick the best quality that fits.\n\n"
-    "Commands:\n"
-    "/audio <url> — audio only\n"
-    "/quality <url> — pick quality manually\n"
-    "/status — bot status\n"
-    "/help — this message\n\n"
-    "{local_api_status_line}\n"
-    "{today_stats_line}"
-)
-
-
 download_semaphore = asyncio.Semaphore(config.MAX_CONCURRENT)
 user_last_request: dict[int, float] = {}
 
@@ -70,15 +58,21 @@ def check_cooldown(user_id: int) -> float:
     return 0.0
 
 
+async def reply(message: Message, text: str, **kwargs: Any) -> Message:
+    return await message.reply_text(render(text), **kwargs)
+
+
 async def is_cooling_down(message: Message, user_id: int) -> bool:
     remaining = check_cooldown(user_id)
     if remaining > 0:
-        await message.reply_text(f"⏳ Wait {remaining:.0f}s before the next request.")
+        await reply(message, msg.COOLDOWN.format(seconds=remaining))
         return True
     return False
 
 
 async def set_reaction(context: ContextTypes.DEFAULT_TYPE, chat_id: int, message_id: int, emoji: str) -> None:
+    if not msg.SHOW_EMOJI:
+        return
     try:
         await context.bot.set_message_reaction(chat_id=chat_id, message_id=message_id, reaction=emoji)
     except TelegramError:
@@ -93,22 +87,22 @@ async def edit_status(
     if not isinstance(message, Message):
         return
     try:
-        await message.edit_text(text[:4000], reply_markup=reply_markup)
+        await message.edit_text(render(text)[:4000], reply_markup=reply_markup)
     except TelegramError as error:
         logger.error("Status edit failed: %s", error)
 
 
 def local_status_line() -> str:
     if api_manager.local_api_available:
-        return f"✅ Large file support active (up to {api_manager.get_effective_max_mb()} MB)"
-    return "⚠️ Large files unavailable. Max 50 MB. Ask admin to set up Local API."
+        return msg.LOCAL_API_ON.format(limit_mb=api_manager.get_effective_max_mb())
+    return msg.LOCAL_API_OFF
 
 
 async def build_start_text() -> str:
     stats = await asyncio.to_thread(get_global_stats)
-    return START_TEMPLATE.format(
+    return msg.START_TEMPLATE.format(
         local_api_status_line=local_status_line(),
-        today_stats_line=f"📈 Today: {stats['today_downloads']} downloads",
+        today_stats_line=msg.TODAY_LINE.format(count=stats["today_downloads"]),
     )
 
 
@@ -116,7 +110,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     message = update.effective_message
     if message is None:
         return
-    await message.reply_text(await build_start_text())
+    await reply(message, await build_start_text())
 
 
 async def record_outcome(
@@ -136,9 +130,9 @@ async def record_outcome(
 
 
 def make_quality_button(label: str, size_mb: float, limit_mb: int, callback_data: str) -> InlineKeyboardButton:
-    size_text = f" ~{size_mb:.0f}MB" if size_mb > 0 else ""
-    lock_text = " 🔒" if size_mb > limit_mb else ""
-    return InlineKeyboardButton(f"{label}{size_text}{lock_text}", callback_data=callback_data)
+    size_text = msg.SIZE_SUFFIX.format(size_mb=size_mb) if size_mb > 0 else ""
+    lock_text = msg.LOCK_MARK if size_mb > limit_mb else ""
+    return InlineKeyboardButton(render(f"{label}{size_text}{lock_text}"), callback_data=callback_data)
 
 
 def build_quality_keyboard(unique_id: str, sizes: dict[int, float]) -> InlineKeyboardMarkup:
@@ -146,17 +140,24 @@ def build_quality_keyboard(unique_id: str, sizes: dict[int, float]) -> InlineKey
     buttons: list[InlineKeyboardButton] = []
     heights = sorted((height for height in sizes if height > 0), reverse=True)[:4]
     for height in heights:
-        buttons.append(make_quality_button(f"{height}p", sizes[height], limit_mb, f"quality:{unique_id}:{height}"))
+        buttons.append(
+            make_quality_button(
+                msg.LABEL_HEIGHT.format(height=height),
+                sizes[height],
+                limit_mb,
+                f"quality:{unique_id}:{height}",
+            )
+        )
     if 0 in sizes:
-        buttons.append(make_quality_button("Audio", sizes[0], limit_mb, f"quality:{unique_id}:audio"))
+        buttons.append(make_quality_button(msg.LABEL_AUDIO, sizes[0], limit_mb, f"quality:{unique_id}:audio"))
     rows = [buttons[start : start + 2] for start in range(0, len(buttons), 2)]
     return InlineKeyboardMarkup(rows)
 
 
 def resolution_label(audio_only: bool, resolution: int | None) -> str | None:
     if audio_only:
-        return "Audio"
-    return f"{resolution}p" if resolution else None
+        return msg.LABEL_AUDIO
+    return msg.LABEL_HEIGHT.format(height=resolution) if resolution else None
 
 
 async def report_failure(
@@ -170,7 +171,7 @@ async def report_failure(
     audio_only: bool,
 ) -> None:
     await edit_status(status_message, error.user_message)
-    await set_reaction(context, chat_id, source_message_id, "❌")
+    await set_reaction(context, chat_id, source_message_id, msg.REACTION_FAIL)
     await record_outcome(
         user_id,
         url,
@@ -237,14 +238,14 @@ async def run_pipeline(
     cookie_path = await asyncio.to_thread(find_cookie_file, request["url"])
     try:
         if download_semaphore.locked():
-            await edit_status(status_message, f"{note}⏳ Queued. Another download is in progress...")
+            await edit_status(status_message, note + msg.QUEUED)
         async with download_semaphore:
-            await edit_status(status_message, f"{note}⬇️ Starting download...")
+            await edit_status(status_message, note + msg.STARTING)
             progress = ProgressTracker(context.bot, status_message.chat_id, status_message.message_id)
             result = await download_media(
                 request["url"], unique_id, resolution, audio_only, cookie_path, progress.hook
             )
-        await edit_status(status_message, "📤 Uploading...")
+        await edit_status(status_message, msg.UPLOADING)
         await send_result(chat_id, result, audio_only)
         try:
             await status_message.delete()
@@ -260,22 +261,22 @@ async def run_pipeline(
             True,
             None,
         )
-        await set_reaction(context, chat_id, source_message_id, "✅")
+        await set_reaction(context, chat_id, source_message_id, msg.REACTION_OK)
     except DownloadError as error:
         await report_failure(
             context, chat_id, source_message_id, status_message, request["user_id"], request["url"], error, audio_only
         )
     except TimedOut:
-        await edit_status(status_message, "❌ Upload timed out.")
-        await set_reaction(context, chat_id, source_message_id, "❌")
+        await edit_status(status_message, msg.ERR_UPLOAD_TIMEOUT)
+        await set_reaction(context, chat_id, source_message_id, msg.REACTION_FAIL)
     except TelegramError as error:
         logger.error("Telegram send failed: %s", error)
-        await edit_status(status_message, "❌ Telegram upload failed.")
-        await set_reaction(context, chat_id, source_message_id, "❌")
+        await edit_status(status_message, msg.ERR_TELEGRAM_UPLOAD)
+        await set_reaction(context, chat_id, source_message_id, msg.REACTION_FAIL)
     except Exception:
         logger.exception("Download failed for %s", request["url"])
-        await edit_status(status_message, "❌ Something went wrong.")
-        await set_reaction(context, chat_id, source_message_id, "❌")
+        await edit_status(status_message, msg.ERR_SOMETHING_WRONG)
+        await set_reaction(context, chat_id, source_message_id, msg.REACTION_FAIL)
     finally:
         await asyncio.to_thread(cleanup_by_id, unique_id)
 
@@ -287,16 +288,16 @@ async def process_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: s
         return
     chat_id = source_message.chat_id
     source_message_id = source_message.message_id
-    await set_reaction(context, chat_id, source_message_id, "👀")
-    status_message = await source_message.reply_text("🔍 Fetching info...")
+    await set_reaction(context, chat_id, source_message_id, msg.REACTION_SEEN)
+    status_message = await reply(source_message, msg.FETCHING)
     try:
         if not await asyncio.to_thread(enforce_storage_limit):
-            await edit_status(status_message, "⚠️ Server is busy storing files. Try again shortly.")
-            await set_reaction(context, chat_id, source_message_id, "❌")
+            await edit_status(status_message, msg.ERR_BUSY_STORAGE)
+            await set_reaction(context, chat_id, source_message_id, msg.REACTION_FAIL)
             return
         if await asyncio.to_thread(is_memory_pressure):
-            await edit_status(status_message, "⚠️ Server memory is low. Try again shortly.")
-            await set_reaction(context, chat_id, source_message_id, "❌")
+            await edit_status(status_message, msg.ERR_MEMORY_LOW)
+            await set_reaction(context, chat_id, source_message_id, msg.REACTION_FAIL)
             return
         cookie_path = await asyncio.to_thread(find_cookie_file, url)
         info = await fetch_metadata(url, cookie_path)
@@ -319,11 +320,8 @@ async def process_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: s
             resolution, fits = select_auto_format(info)
             note = ""
             if not fits:
-                note = (
-                    f"⚠️ No quality fits under {api_manager.get_effective_max_mb()} MB. "
-                    "Trying the smallest; it may be rejected.\n"
-                )
-            await run_pipeline(context, chat_id, source_message_id, status_message, request, resolution, False, note)
+                note = msg.NO_QUALITY_FITS.format(limit_mb=api_manager.get_effective_max_mb())
+            await run_pipeline(context, chat_id, source_message_id, status_message, request, resolution, False, render(note))
         else:
             unique_id = uuid.uuid4().hex[:10]
             pending = context.user_data.setdefault("pending", {})
@@ -332,7 +330,7 @@ async def process_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: s
             pending[unique_id] = request
             await edit_status(
                 status_message,
-                f"🎬 {request['title']}\nChoose a quality:",
+                msg.PICKER.format(title=request["title"]),
                 build_quality_keyboard(unique_id, sizes),
             )
     except DownloadError as error:
@@ -341,8 +339,8 @@ async def process_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: s
         )
     except Exception:
         logger.exception("Processing failed for %s", url)
-        await edit_status(status_message, "❌ Something went wrong.")
-        await set_reaction(context, chat_id, source_message_id, "❌")
+        await edit_status(status_message, msg.ERR_SOMETHING_WRONG)
+        await set_reaction(context, chat_id, source_message_id, msg.REACTION_FAIL)
 
 
 async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -354,7 +352,7 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     if not urls:
         return
     if len(urls) > config.BATCH_LIMIT:
-        await message.reply_text(f"ℹ️ Only processing first {config.BATCH_LIMIT} links.")
+        await reply(message, msg.BATCH_LIMIT.format(limit=config.BATCH_LIMIT))
         urls = urls[: config.BATCH_LIMIT]
     if await is_cooling_down(message, user.id):
         return
@@ -379,7 +377,7 @@ async def audio_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
     url = find_command_url(message, context)
     if url is None:
-        await message.reply_text("Usage: /audio <url> or reply to a message containing a link.")
+        await reply(message, msg.USAGE_AUDIO)
         return
     if await is_cooling_down(message, user.id):
         return
@@ -393,7 +391,7 @@ async def quality_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
     url = find_command_url(message, context)
     if url is None:
-        await message.reply_text("Usage: /quality <url> or reply to a message containing a link.")
+        await reply(message, msg.USAGE_QUALITY)
         return
     if await is_cooling_down(message, user.id):
         return
@@ -408,7 +406,7 @@ async def handle_quality_callback(update: Update, context: ContextTypes.DEFAULT_
     pending = context.user_data.get("pending", {}) if context.user_data else {}
     request = pending.get(parts[1]) if len(parts) == 3 else None
     if request is None:
-        await query.answer("This request expired. Send the link again.", show_alert=True)
+        await query.answer(render(msg.ERR_REQUEST_EXPIRED), show_alert=True)
         return
     choice = parts[2]
     audio_only = choice == "audio"
@@ -417,17 +415,13 @@ async def handle_quality_callback(update: Update, context: ContextTypes.DEFAULT_
     elif choice.isdigit():
         size_key = int(choice)
     else:
-        await query.answer("Invalid quality.", show_alert=True)
+        await query.answer(render(msg.ERR_INVALID_QUALITY), show_alert=True)
         return
     resolution = None if audio_only else size_key
     size_mb = request["sizes"].get(size_key, 0.0)
     limit_mb = api_manager.get_effective_max_mb()
     if size_mb > limit_mb:
-        await query.answer(
-            f"🔒 This quality is {size_mb:.0f} MB. Max allowed is {limit_mb} MB. "
-            "Set up the Local Bot API Server to unlock.",
-            show_alert=True,
-        )
+        await query.answer(render(msg.ERR_LOCK_ALERT.format(size_mb=size_mb, limit_mb=limit_mb)), show_alert=True)
         return
     pending.pop(parts[1], None)
     await query.answer()
@@ -450,26 +444,24 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     stats = await asyncio.to_thread(get_global_stats)
     age_days = await asyncio.to_thread(yt_dlp_age_days)
     if age_days > 30:
-        ytdlp_line = f"⚠️ yt-dlp is {age_days} days old. Extractors may be broken; update it."
+        ytdlp_line = msg.STATUS_YTDLP_OLD.format(days=age_days)
     else:
-        ytdlp_line = f"🧩 yt-dlp: {yt_dlp.version.__version__}"
+        ytdlp_line = msg.STATUS_YTDLP_OK.format(version=yt_dlp.version.__version__)
     lines = [
-        "📊 Bot Status",
-        "━━━━━━━━━━━━",
-        f"{'🟢' if api_manager.public_bot is not None else '🔴'} Public API: "
-        f"{'Connected' if api_manager.public_bot is not None else 'Not started'}",
-        f"{'🟢' if api_manager.local_api_available else '🔴'} Local API: "
-        f"{'Connected' if api_manager.local_api_available else 'Not found'}",
-        f"📏 Max file size: {api_manager.get_effective_max_mb()} MB",
-        f"💾 Temp storage: {temp_mb:.1f} MB / {config.TEMP_LIMIT_MB} MB",
-        f"⬇️ Active downloads: {1 if download_semaphore.locked() else 0}",
-        f"📈 Today: {stats['today_downloads']} downloads",
-        f"👥 Total users: {stats['total_users']}",
-        f"🕐 Uptime: {format_uptime(time.time() - config.START_TIME)}",
+        msg.STATUS_TITLE,
+        msg.STATUS_DIVIDER,
+        msg.STATUS_PUBLIC_API_UP if api_manager.public_bot is not None else msg.STATUS_PUBLIC_API_DOWN,
+        msg.STATUS_LOCAL_API_UP if api_manager.local_api_available else msg.STATUS_LOCAL_API_DOWN,
+        msg.STATUS_MAX_SIZE.format(limit_mb=api_manager.get_effective_max_mb()),
+        msg.STATUS_TEMP.format(used_mb=temp_mb, limit_mb=config.TEMP_LIMIT_MB),
+        msg.STATUS_ACTIVE.format(count=1 if download_semaphore.locked() else 0),
+        msg.TODAY_LINE.format(count=stats["today_downloads"]),
+        msg.STATUS_USERS.format(count=stats["total_users"]),
+        msg.STATUS_UPTIME.format(uptime=format_uptime(time.time() - config.START_TIME)),
         ytdlp_line,
-        "🎞 ffmpeg: available" if config.FFMPEG_AVAILABLE else "⚠️ ffmpeg missing: merged formats only",
+        msg.STATUS_FFMPEG_OK if config.FFMPEG_AVAILABLE else msg.STATUS_FFMPEG_MISSING,
     ]
-    await message.reply_text("\n".join(lines))
+    await reply(message, "\n".join(lines))
 
 
 async def cookies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -479,15 +471,15 @@ async def cookies_command(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
     if not context.args:
         sites = await asyncio.to_thread(list_cookie_sites)
-        listing = ", ".join(sites) if sites else "none"
-        await message.reply_text(f"🍪 Saved cookie sites: {listing}\nUsage: /cookies <site>")
+        listing = ", ".join(sites) if sites else msg.COOKIES_NONE
+        await reply(message, msg.COOKIES_LIST.format(sites=listing))
         return
     site = re.sub(r"[^a-z0-9_-]", "", context.args[0].lower())
     if not site:
-        await message.reply_text("❌ Invalid site name.")
+        await reply(message, msg.ERR_INVALID_SITE)
         return
     context.user_data["cookie_site"] = site
-    await message.reply_text(f"📎 Send the cookies .txt file for {site} now.")
+    await reply(message, msg.COOKIES_SEND_FILE.format(site=site))
 
 
 async def cookie_document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -500,7 +492,7 @@ async def cookie_document_handler(update: Update, context: ContextTypes.DEFAULT_
         return
     document = message.document
     if document.file_size and document.file_size > COOKIE_UPLOAD_LIMIT_BYTES:
-        await message.reply_text("❌ Cookie file is too large.")
+        await reply(message, msg.ERR_COOKIE_TOO_LARGE)
         return
     staging_path = os.path.join(config.COOKIES_DIR, f"{site}.upload")
     target_path = os.path.join(config.COOKIES_DIR, f"{site}.txt")
@@ -508,10 +500,10 @@ async def cookie_document_handler(update: Update, context: ContextTypes.DEFAULT_
     await telegram_file.download_to_drive(staging_path)
     if not await asyncio.to_thread(is_netscape_cookie_file, staging_path):
         await asyncio.to_thread(delete_file_safe, staging_path)
-        await message.reply_text("❌ Not a Netscape cookie file. Export with 'Get cookies.txt LOCALLY'.")
+        await reply(message, msg.ERR_NOT_NETSCAPE)
         return
     await asyncio.to_thread(os.replace, staging_path, target_path)
-    await message.reply_text(f"✅ Saved cookies for {site}.")
+    await reply(message, msg.COOKIES_SAVED.format(site=site))
 
 
 async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -521,7 +513,7 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         return
     text = " ".join(context.args or []).strip()
     if not text:
-        await message.reply_text("Usage: /broadcast <message>")
+        await reply(message, msg.USAGE_BROADCAST)
         return
     user_ids = await asyncio.to_thread(get_all_user_ids)
     sent = 0
@@ -533,7 +525,7 @@ async def broadcast_command(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         except TelegramError:
             failed += 1
         await asyncio.sleep(0.05)
-    await message.reply_text(f"📣 Broadcast done. Sent: {sent}, failed: {failed}.")
+    await reply(message, msg.BROADCAST_DONE.format(sent=sent, failed=failed))
 
 
 async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -543,32 +535,32 @@ async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         return
     detailed = await asyncio.to_thread(get_detailed_stats)
     lines = [
-        "📈 Detailed stats",
-        f"Attempts: {detailed['attempts']}   Failures: {detailed['failures']}",
+        msg.STATS_TITLE,
+        msg.STATS_TOTALS.format(attempts=detailed["attempts"], failures=detailed["failures"]),
         "",
-        "By site:",
-        *[f"• {site}: {count}" for site, count in detailed["by_site"]],
+        msg.STATS_BY_SITE,
+        *[msg.STATS_BULLET.format(label=site, count=count) for site, count in detailed["by_site"]],
         "",
-        "By quality:",
-        *[f"• {label}: {count}" for label, count in detailed["by_resolution"]],
+        msg.STATS_BY_QUALITY,
+        *[msg.STATS_BULLET.format(label=label, count=count) for label, count in detailed["by_resolution"]],
         "",
-        "Last 7 days:",
-        *[f"• {day}: {count}" for day, count in detailed["by_day"]],
+        msg.STATS_LAST_DAYS,
+        *[msg.STATS_BULLET.format(label=day, count=count) for day, count in detailed["by_day"]],
         "",
-        "Errors:",
-        *[f"• {error_type}: {count}" for error_type, count in detailed["errors"]],
+        msg.STATS_ERRORS,
+        *[msg.STATS_BULLET.format(label=error_type, count=count) for error_type, count in detailed["errors"]],
         "",
-        "Top users:",
-        *[f"• {user_id}: {count}" for user_id, count in detailed["top_users"]],
+        msg.STATS_TOP_USERS,
+        *[msg.STATS_BULLET.format(label=user_id, count=count) for user_id, count in detailed["top_users"]],
     ]
-    await message.reply_text("\n".join(lines)[:4000])
+    await reply(message, "\n".join(lines)[:4000])
 
 
 async def global_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.error("Unhandled exception", exc_info=context.error)
     if isinstance(update, Update) and update.effective_message is not None:
         try:
-            await update.effective_message.reply_text("❌ Something went wrong.")
+            await reply(update.effective_message, msg.ERR_SOMETHING_WRONG)
         except TelegramError:
             pass
 
