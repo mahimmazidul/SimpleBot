@@ -83,3 +83,16 @@ async def set_reaction(context: ContextTypes.DEFAULT_TYPE, chat_id: int, message
         await context.bot.set_message_reaction(chat_id=chat_id, message_id=message_id, reaction=emoji)
     except TelegramError:
         pass
+
+
+async def edit_status(
+    message: Message | None,
+    text: str,
+    reply_markup: InlineKeyboardMarkup | None = None,
+) -> None:
+    if not isinstance(message, Message):
+        return
+    try:
+        await message.edit_text(text[:4000], reply_markup=reply_markup)
+    except TelegramError as error:
+        logger.error("Status edit failed: %s", error)
