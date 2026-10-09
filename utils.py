@@ -28,3 +28,8 @@ MOBILE_UA_POOL = (
 
 def extract_urls(text: str) -> list[str]:
     return [match.rstrip(TRAILING_PUNCTUATION) for match in URL_PATTERN.findall(text)]
+
+
+def is_fetchable_url(url: str) -> bool:
+    parsed = urlparse(url)
+    return parsed.scheme in ("http", "https") and bool(parsed.hostname)
