@@ -14,3 +14,7 @@ class DownloadError(Exception):
 
 class LoginRequiredError(DownloadError):
     user_message = "🔒 This content is private or needs login. Admin can upload cookies for this site."
+
+
+class GeoBlockedError(DownloadError):
+    user_message = "🌍 Not available in this region."
