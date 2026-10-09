@@ -51,3 +51,16 @@ def enforce_storage_limit() -> bool:
         return True
     periodic_cleanup(60)
     return get_temp_usage_mb() <= config.TEMP_LIMIT_MB
+
+
+def cleanup_logs(max_age_days: int = 7) -> int:
+    cutoff = time.time() - max_age_days * 86400
+    with os.scandir(config.LOG_DIR) as entries:
+        stale_paths = [
+            entry.path
+            for entry in entries
+            if entry.is_file() and entry.name != "bot.log" and entry.stat().st_mtime < cutoff
+        ]
+    for path in stale_paths:
+        delete_file_safe(path)
+    return len(stale_paths)
