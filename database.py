@@ -67,3 +67,28 @@ def record_user(user_id: int, username: str | None) -> None:
             """,
             (user_id, username),
         )
+
+
+def record_download(
+    user_id: int,
+    url: str,
+    site: str | None,
+    resolution: str | None,
+    file_size_mb: float | None,
+    duration_sec: int | None,
+    success: bool,
+    error_type: str | None,
+) -> None:
+    with closing(open_connection()) as connection, connection:
+        connection.execute(
+            """
+            INSERT INTO downloads (user_id, url, site, resolution, file_size_mb, duration_sec, success, error_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (user_id, url, site, resolution, file_size_mb, duration_sec, int(success), error_type),
+        )
+        if success:
+            connection.execute(
+                "UPDATE users SET total_downloads = total_downloads + 1, last_active = CURRENT_TIMESTAMP WHERE user_id = ?",
+                (user_id,),
+            )
