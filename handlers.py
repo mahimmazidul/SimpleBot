@@ -343,3 +343,22 @@ async def process_url(update: Update, context: ContextTypes.DEFAULT_TYPE, url: s
         logger.exception("Processing failed for %s", url)
         await edit_status(status_message, "❌ Something went wrong.")
         await set_reaction(context, chat_id, source_message_id, "❌")
+
+
+async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    message = update.effective_message
+    user = update.effective_user
+    if message is None or message.text is None or user is None:
+        return
+    urls = [url for url in extract_urls(message.text) if is_fetchable_url(url)]
+    if not urls:
+        return
+    if len(urls) > config.BATCH_LIMIT:
+        await message.reply_text(f"ℹ️ Only processing first {config.BATCH_LIMIT} links.")
+        urls = urls[: config.BATCH_LIMIT]
+    if await is_cooling_down(message, user.id):
+        return
+    await asyncio.to_thread(record_user, user.id, user.username)
+    mode = "auto" if config.AUTO_QUALITY else "manual"
+    for url in urls:
+        await process_url(update, context, url, mode)
