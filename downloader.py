@@ -66,3 +66,10 @@ def find_cookie_file(url: str) -> str | None:
         if os.path.isfile(candidate_path):
             return candidate_path
     return None
+
+
+def mark_cookie_stale(cookie_path: str) -> None:
+    try:
+        os.replace(cookie_path, cookie_path + ".stale")
+    except OSError as error:
+        logger.error("Could not mark cookie file stale: %s", error)
