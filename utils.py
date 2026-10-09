@@ -7,3 +7,6 @@ from urllib.parse import urlparse
 import yt_dlp
 
 import config
+
+URL_PATTERN = re.compile(r"https?://[^\s<>\"']+")
+TRAILING_PUNCTUATION = ".,;:!?)]}"
