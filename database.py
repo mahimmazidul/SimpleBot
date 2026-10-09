@@ -53,3 +53,17 @@ def init_db() -> None:
             if os.path.exists(path):
                 os.remove(path)
         create_schema()
+
+
+def record_user(user_id: int, username: str | None) -> None:
+    with closing(open_connection()) as connection, connection:
+        connection.execute(
+            """
+            INSERT INTO users (user_id, username, first_seen, last_active, total_downloads)
+            VALUES (?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 0)
+            ON CONFLICT(user_id) DO UPDATE SET
+                username = excluded.username,
+                last_active = CURRENT_TIMESTAMP
+            """,
+            (user_id, username),
+        )
