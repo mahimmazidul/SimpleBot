@@ -139,3 +139,15 @@ def make_quality_button(label: str, size_mb: float, limit_mb: int, callback_data
     size_text = f" ~{size_mb:.0f}MB" if size_mb > 0 else ""
     lock_text = " 🔒" if size_mb > limit_mb else ""
     return InlineKeyboardButton(f"{label}{size_text}{lock_text}", callback_data=callback_data)
+
+
+def build_quality_keyboard(unique_id: str, sizes: dict[int, float]) -> InlineKeyboardMarkup:
+    limit_mb = api_manager.get_effective_max_mb()
+    buttons: list[InlineKeyboardButton] = []
+    heights = sorted((height for height in sizes if height > 0), reverse=True)[:4]
+    for height in heights:
+        buttons.append(make_quality_button(f"{height}p", sizes[height], limit_mb, f"quality:{unique_id}:{height}"))
+    if 0 in sizes:
+        buttons.append(make_quality_button("Audio", sizes[0], limit_mb, f"quality:{unique_id}:audio"))
+    rows = [buttons[start : start + 2] for start in range(0, len(buttons), 2)]
+    return InlineKeyboardMarkup(rows)
