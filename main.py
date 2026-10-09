@@ -654,3 +654,16 @@ def build_application() -> Application:
         first=CLEANUP_INTERVAL_SECONDS,
     )
     return application
+
+
+def main() -> None:
+    ensure_directories()
+    wipe_temp_directory()
+    if uvloop is not None:
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+    application = build_application()
+    application.run_polling(
+        drop_pending_updates=True,
+        allowed_updates=Update.ALL_TYPES,
+        stop_signals=(signal.SIGINT, signal.SIGTERM),
+    )
