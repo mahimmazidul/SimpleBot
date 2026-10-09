@@ -399,3 +399,20 @@ async def edit_status(
         await message.edit_text(text[:4000], reply_markup=reply_markup)
     except TelegramError as error:
         logger.error("Status edit failed: %s", error)
+
+START_TEXT = (
+    "👋 Send me a video link and I'll download it for you.\n"
+    "Pick a quality from the buttons and the file will be sent here.\n"
+    "Use /help for details."
+)
+HELP_TEXT = (
+    "📖 How to use\n"
+    "1. Send a link from any site yt-dlp supports.\n"
+    "2. Tap a quality button.\n"
+    "3. The file is sent back to you.\n\n"
+    "Large files (over 50 MB): {local_state}\n"
+    "Max file size: {limit_mb} MB\n"
+    "Max duration: {minutes} minutes\n\n"
+    "Commands: /start, /help, /status\n"
+    "Admins: /cookies <site> (reply to a .txt cookie file)"
+)
