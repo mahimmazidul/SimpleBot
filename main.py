@@ -120,3 +120,12 @@ async def periodic_cleanup_job(context: ContextTypes.DEFAULT_TYPE) -> None:
 
 def extract_urls(text: str) -> list[str]:
     return [match.rstrip(TRAILING_PUNCTUATION) for match in URL_PATTERN.findall(text)]
+
+
+def check_user_cooldown(user_id: int) -> float:
+    now = time.monotonic()
+    last_seen = user_cooldowns.get(user_id)
+    if last_seen is not None and now - last_seen < USER_COOLDOWN_SECONDS:
+        return USER_COOLDOWN_SECONDS - (now - last_seen)
+    user_cooldowns[user_id] = now
+    return 0.0
